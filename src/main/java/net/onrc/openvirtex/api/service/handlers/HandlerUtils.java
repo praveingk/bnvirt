@@ -329,19 +329,19 @@ public final class HandlerUtils {
                 }
             }
 
-            // Is the physical switch already used by another virtual switch?
-            try {
-                OVXSwitch vsw = OVXMap.getInstance().getVirtualSwitch(sw, tenantId);
-                if (vsw != null) {
-                    throw new InvalidDPIDException(
-                            "The physical dpid is already part of a "
-                                    + "virtual switch in the virtual network you have specified. DPID: "
-                                    + String.valueOf(dpid));
-                }
-            } catch (SwitchMappingException e) {
-                // No virtual switch maps to the given physical switch - this is what we want
-                continue;
-            }
+            // Pravein : Below is commented out, to enable multi-switch capability with the given switch
+            //try {
+            //    OVXSwitch vsw = OVXMap.getInstance().getVirtualSwitch(sw, tenantId);
+            //    if (vsw != null) {
+            //        throw new InvalidDPIDException(
+            //                "The physical dpid is already part of a "
+            //                        + "virtual switch in the virtual network you have specified. DPID: "
+            //                        + String.valueOf(dpid));
+            //    }
+            //} catch (SwitchMappingException e) {
+            //    // No virtual switch maps to the given physical switch - this is what we want
+            //    continue;
+            //}
 
         }
     }

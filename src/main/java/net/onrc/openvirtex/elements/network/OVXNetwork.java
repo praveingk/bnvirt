@@ -297,6 +297,7 @@ public class OVXNetwork extends Network<OVXSwitch, OVXPort, OVXLink> implements
             throws IndexOutOfBoundException {
         final long switchId = (long) 0xa42305 << 32
                 | this.dpidCounter.getNewIndex();
+        System.out.println("Pravein: Inside CreateSwitch. switchID: "+Long.toHexString(switchId));
         return this.createSwitch(dpids, switchId);
     }
 
