@@ -38,6 +38,11 @@ public class SwitchMappingException extends MappingException {
         super(value.getName() + " not found for tenant with ID " + key);
     }
 
+    public SwitchMappingException(Integer key, Integer port,Class value) {
+        super(value.getName() + " not found for tenant with ID " + key + " and Port "+port);
+    }
+
+
     public SwitchMappingException(Switch key, Class value) {
         super(value.getName() + " not found for switch [" + key.getSwitchId()
                 + "]");

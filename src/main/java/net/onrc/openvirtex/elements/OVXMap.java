@@ -27,6 +27,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
+import net.onrc.openvirtex.api.service.handlers.tenant.PhysicalSwitchPort;
 import net.onrc.openvirtex.elements.address.OVXIPAddress;
 import net.onrc.openvirtex.elements.address.PhysicalIPAddress;
 import net.onrc.openvirtex.elements.datapath.OVXSwitch;
@@ -61,6 +62,7 @@ public final class OVXMap implements Mappable {
 
     private ConcurrentHashMap<OVXSwitch, ArrayList<PhysicalSwitch>> virtualSwitchMap;
     private ConcurrentHashMap<PhysicalSwitch, ConcurrentHashMap<Integer, OVXSwitch>> physicalSwitchMap;
+    private ConcurrentHashMap<PhysicalSwitchPort, OVXSwitch> physicalSwitchPortMap;
     private ConcurrentHashMap<OVXLink, ArrayList<PhysicalLink>> virtualLinkMap;
     private ConcurrentHashMap<PhysicalLink, ConcurrentHashMap<Integer, List<OVXLink>>> physicalLinkMap;
     private ConcurrentHashMap<SwitchRoute, ArrayList<PhysicalLink>> routetoPhyLinkMap;
@@ -87,6 +89,7 @@ public final class OVXMap implements Mappable {
                 new DefaultCharArrayNodeFactory());
         this.macMap = new ConcurrentRadixTree<Integer>(
                 new DefaultCharArrayNodeFactory());
+        this.physicalSwitchPortMap = new ConcurrentHashMap<PhysicalSwitchPort, OVXSwitch>();
     }
 
     /**
@@ -141,7 +144,26 @@ public final class OVXMap implements Mappable {
             final OVXSwitch virtualSwitch) {
         this.addPhysicalSwitch(physicalSwitch, virtualSwitch);
         this.addVirtualSwitch(virtualSwitch, physicalSwitch);
+
+        System.out.println("Mapping "+ physicalSwitch.toString()+ "to " +virtualSwitch.toString());
     }
+
+    /**
+     * Creates the mapping between OVX switch to physical switch and from
+     * physical switch to virtual switch.
+     *
+     * @param physicalSwitch
+     *            Refers to the PhysicalSwitch from the PhysicalNetwork
+     * @param virtualSwitch
+     *            Has type OVXSwitch and this switch is specific to a tenantId
+     *
+     */
+    public void addSwitchPort(final PhysicalSwitch physicalSwitch, final Integer port, final Integer tenantID,
+                           final OVXSwitch virtualSwitch) {
+        PhysicalSwitchPort myPSP = new PhysicalSwitchPort(physicalSwitch, port, tenantID);
+        System.out.println("Mapping ("+ physicalSwitch.toString()+ ", " + port+","+ tenantID+" ):"+virtualSwitch.toString());
+    }
+
 
     /**
      * Creates the mapping between PhysicalLinks and a VirtualLink. This function
@@ -441,6 +463,30 @@ public final class OVXMap implements Mappable {
         OVXSwitch vsw = sws.get(tenantId);
         if (vsw == null) {
             throw new SwitchMappingException(tenantId, OVXSwitch.class);
+        }
+        return vsw;
+    }
+
+    /**
+     * Gets the OVXSwitch which has been specified by the physicalSwitch and
+     * tenantId.
+     *
+     * @param physicalSwitch
+     *            A PhysicalSwitch object is a single switch in the
+     *            PhysicalNetwork
+     * @param tenantId the tenant ID
+     * @param tenantId the Switch port
+     * @return virtualSwitch the virtual switch
+     * @throws SwitchMappingException if the physical switch is invalid
+     */
+    @Override
+    public OVXSwitch getVirtualSwitch(final PhysicalSwitch physicalSwitch,
+                                      final Integer port, final Integer tenantId) throws SwitchMappingException {
+        PhysicalSwitchPort myPSP = new PhysicalSwitchPort(physicalSwitch, port, tenantId);
+        OVXSwitch vsw = this.physicalSwitchPortMap.get(myPSP);
+
+        if (vsw == null) {
+            throw new SwitchMappingException(tenantId, port,OVXSwitch.class);
         }
         return vsw;
     }

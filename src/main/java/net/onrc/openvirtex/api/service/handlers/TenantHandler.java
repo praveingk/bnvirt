@@ -77,6 +77,10 @@ public class TenantHandler extends AbstractHandler implements RequestHandler {
      */
     public static final String DPID = "dpid";
     /**
+     * Keyword for the switch.
+     */
+    public static final String PDPID = "pdpid";
+    /**
      * Keyword for the source switch.
      */
     public static final String SRC_DPID = "srcDpid";

@@ -60,6 +60,18 @@ public interface Mappable {
             final OVXSwitch virtualSwitch);
 
     /**
+     * Creates the mapping between OVX switch to physical switch and from
+     * physical switch to virtual switch.
+     *
+     * @param physicalSwitch
+     *            Refers to the PhysicalSwitch from the PhysicalNetwork
+     * @param virtualSwitch
+     *            Has type OVXSwitch and this switch is specific to a tenantId
+     *
+     */
+    public void addSwitchPort(final PhysicalSwitch physicalSwitch, final Integer port, final Integer tenantID,
+                               final OVXSwitch virtualSwitch);
+    /**
      * Create the mapping between PhysicalLinks and a VirtualLink. This function
      * takes in a list of physicalLinks rather than an individual physicalLink
      * and adds the list to the OVXmap.
@@ -129,6 +141,20 @@ public interface Mappable {
      */
     public OVXSwitch getVirtualSwitch(PhysicalSwitch physicalSwitch,
             Integer tenantId) throws SwitchMappingException;
+
+    /**
+     * Get the virtualSwitch which has been specified by the physicalSwitch and
+     * tenantId.
+     *
+     * @param physicalSwitch
+     *            A PhysicalSwitch object is a single switch in the
+     *            PhysicalNetwork
+     *
+     * @return virtualSwitch A OVXSwitch object which represents a single switch
+     *         in the OVXNetwork
+     */
+    public OVXSwitch getVirtualSwitch(PhysicalSwitch physicalSwitch, Integer port,
+                                      Integer tenantId) throws SwitchMappingException;
 
     /**
      * Gets the list of OVXLinks that are part of virtual network identified by

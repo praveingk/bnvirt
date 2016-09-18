@@ -61,17 +61,18 @@ public class CreateOVXSwitch extends ApiHandler<Map<String, Object>> {
 
             HandlerUtils.isValidTenantId(tenantId.intValue());
 
-            System.out.println("Pravein: Creating a Virtual Switch: tenant:"+tenantId+" dpids:"+dpids.toString() +" dp: "+dp);
+            System.out.println("Pravein: Creating a Virtual Switch: tenant:"+tenantId+" dpids:"+dpids.toString() +" VDPID: "+dp);
 
             final OVXMap map = OVXMap.getInstance();
             final OVXNetwork virtualNetwork = map.getVirtualNetwork(tenantId
                     .intValue());
             final List<Long> longDpids = new ArrayList<Long>();
+            System.out.println("Phys DPIDs:");
             for (final Number dpid : dpids) {
                 longDpids.add(dpid.longValue());
+                System.out.println(Long.toHexString(dpid.longValue()));
             }
 
-            System.out.println(longDpids.toString());
 
             HandlerUtils.isValidDPID(tenantId.intValue(), longDpids);
             final OVXSwitch ovxSwitch;
