@@ -68,7 +68,7 @@ public class AbstractAPICalls extends TestCase {
 
     }
 
-    public JSONRPC2Response createPort(final Integer tenantId, final Long dpid,
+    public JSONRPC2Response createPort(final Integer tenantId, final Long vdpid, final Long pdpid,
             final Short port) {
 
         final CreateOVXPort cp = new CreateOVXPort();
@@ -77,11 +77,11 @@ public class AbstractAPICalls extends TestCase {
         final HashMap<String, Object> request = new HashMap<String, Object>() {
             {
                 this.put(TenantHandler.TENANT, tenantId);
-                this.put(TenantHandler.DPID, dpid);
+                this.put(TenantHandler.VDPID, vdpid);
+                this.put(TenantHandler.PDPID, pdpid);
                 this.put(TenantHandler.PORT, port);
             }
         };
-
         return cp.process(request);
     }
 

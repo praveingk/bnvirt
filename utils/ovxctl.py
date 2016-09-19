@@ -115,18 +115,19 @@ def do_createSwitch(gopts, opts, args):
         print "Virtual switch has been created (tenant_id %s, switch_id %s)"  % (args[0], switch_name)
 
 def pa_createPort(args, cmd):
-    usage = "%s <tenant_id> <physical_dpid> <physical_port>" % USAGE.format(cmd)
+    usage = "%s <tenant_id> <virtual_dpid> <physical_dpid> <physical_port>" % USAGE.format(cmd)
     (sdesc, ldesc) = DESCS[cmd]
     parser = OptionParser(usage=usage, description=ldesc)
     return parser.parse_args(args)
 
 def do_createPort(gopts, opts, args):
-    if len(args) != 3:
+    if len(args) != 4:
         print ("createPort : must specify: " +
-        "virtual tenant_id, physical dpid " +
-        "(e.g. 00:00:00:00:00:00:00:01) and physical port")
+        "virtual tenant_id, virtucal dpid " +
+        "(e.g. 00:00:00:00:00:00:00:01), physical dpid and physical port")
         sys.exit()
-    req = { "tenantId" : int(args[0]), "dpid" : int(args[1].replace(":", ""), 16), "port" : int(args[2]) }
+    print "Doing CreatePort\n";
+    req = { "tenantId" : int(args[0]), "vdpid" : int(args[1].replace(":", ""), 16), "pdpid" : int(args[2].replace(":", ""), 16), "port" : int(args[3]) }
     reply = connect(gopts, "tenant", "createPort", data=req, passwd=getPasswd(gopts))
     
     switchId = reply.get('vdpid')

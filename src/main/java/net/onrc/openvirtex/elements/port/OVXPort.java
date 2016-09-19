@@ -58,8 +58,9 @@ public class OVXPort extends Port<OVXSwitch, OVXLink> implements Persistable {
         this.tenantId = tenantId;
         this.physicalPort = port;
         try {
+            // Pravein : API
             this.parentSwitch = OVXMap.getInstance().getVirtualSwitch(
-                    port.getParentSwitch(), tenantId);
+                    port.getParentSwitch(), port, tenantId);
         } catch (SwitchMappingException e) {
             // something pretty wrong if we get here. Not 100% on how to handle
             // this

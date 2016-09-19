@@ -145,7 +145,7 @@ public final class OVXMap implements Mappable {
         this.addPhysicalSwitch(physicalSwitch, virtualSwitch);
         this.addVirtualSwitch(virtualSwitch, physicalSwitch);
 
-        System.out.println("Mapping "+ physicalSwitch.toString()+ "to " +virtualSwitch.toString());
+        //System.out.println("Mapping "+ physicalSwitch.toString()+ "to " +virtualSwitch.toString());
     }
 
     /**
@@ -161,7 +161,7 @@ public final class OVXMap implements Mappable {
     public void addSwitchPort(final PhysicalSwitch physicalSwitch, final Integer port, final Integer tenantID,
                            final OVXSwitch virtualSwitch) {
         PhysicalSwitchPort myPSP = new PhysicalSwitchPort(physicalSwitch, port, tenantID);
-        System.out.println("Mapping ("+ physicalSwitch.toString()+ ", " + port+","+ tenantID+" ):"+virtualSwitch.toString());
+        System.out.println("Mapping ("+ physicalSwitch.getSwitchName()+ ", " + port+","+ tenantID+" ):"+virtualSwitch.getSwitchName());
     }
 
 
