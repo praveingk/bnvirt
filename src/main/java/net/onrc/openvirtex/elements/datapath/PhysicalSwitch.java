@@ -18,6 +18,7 @@ package net.onrc.openvirtex.elements.datapath;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 import net.onrc.openvirtex.core.io.OVXSendMsg;
@@ -70,20 +71,27 @@ public class PhysicalSwitch extends Switch<PhysicalPort> {
         @Override
         public void run() {
             OVXSwitch vsw;
+            //System.out.println("Dereg PhysicalSwitch..");
             try {
                 if (psw.map.hasVirtualSwitch(psw, tid)) {
-                    vsw = psw.map.getVirtualSwitch(psw, tid);
-                    /* save = don't destroy the switch, it can be saved */
-                    boolean save = false;
-                    if (vsw instanceof OVXBigSwitch) {
-                        save = ((OVXBigSwitch) vsw).tryRecovery(psw);
-                    }
-                    if (!save) {
-                        vsw.unregister();
+                    Map<Short,PhysicalPort> portMap = psw.getPorts();
+                    Set<Short> ports = portMap.keySet();
+                    for (Short port : ports) {
+                        vsw = psw.map.getVirtualSwitch(psw,(int) port, tid);
+                        /* save = don't destroy the switch, it can be saved */
+                        boolean save = false;
+                        if (vsw instanceof OVXBigSwitch) {
+                            save = ((OVXBigSwitch) vsw).tryRecovery(psw);
+                        }
+                        if (!save) {
+                            vsw.unregister();
+                            System.out.println("Unregistering "+ Long.toHexString(vsw.getSwitchId()));
+                        }
                     }
                 }
             } catch (SwitchMappingException e) {
-                log.warn("Inconsistency in OVXMap: {}", e.getMessage());
+                // Pravein HACK : Suppress Mapping Exceptions, since we are tryng out all ports.
+                //log.warn("Inconsistency in OVXMap: {}", e.getMessage());
             }
         }
     }

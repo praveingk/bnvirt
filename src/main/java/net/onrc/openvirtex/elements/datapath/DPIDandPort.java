@@ -87,6 +87,6 @@ public class DPIDandPort {
 
     @Override
     public String toString() {
-        return this.dpid + ":" + this.port;
+        return Long.toHexString(this.dpid) + ":" + this.port;
     }
 }

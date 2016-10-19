@@ -98,6 +98,7 @@ public class OVXLink extends Link<OVXPort, OVXSwitch> {
             final OVXPort srcPort, final OVXPort dstPort, RoutingAlgorithms alg)
             throws PortMappingException {
         super(srcPort, dstPort);
+        System.out.println("Creatinga new link with above ports..");
         this.linkId = linkId;
         this.tenantId = tenantId;
         srcPort.setOutLink(this);
@@ -112,6 +113,7 @@ public class OVXLink extends Link<OVXPort, OVXSwitch> {
         }
         this.srcPort.getPhysicalPort().removeOVXPort(this.srcPort);
         this.srcPort.getPhysicalPort().setOVXPort(this.srcPort);
+        System.out.println("Created a link..");
     }
 
     /**

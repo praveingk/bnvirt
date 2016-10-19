@@ -414,9 +414,12 @@ public abstract class OVXSwitch extends Switch<OVXPort> implements Persistable {
         ovxController.registerOVXSwitch(this);
         this.setActive(true);
         for (OVXPort p : getPorts().values()) {
+            //System.out.println("Pravein : Trying to boot up ports.. "+ p.getPortNumber() + ",phys "+p.getPhysicalPortNumber() +" isActive "+ p.isActive());
             if (p.isLink()) {
                 p.boot();
+                System.out.println("Pravein : Booted up ports.. "+ p.getPortNumber() +" isActive "+ p.isActive());
             }
+            //p.boot();
         }
         return true;
     }

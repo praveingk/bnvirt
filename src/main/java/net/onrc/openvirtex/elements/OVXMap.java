@@ -161,6 +161,7 @@ public final class OVXMap implements Mappable {
     public void addSwitchPort(final PhysicalSwitch physicalSwitch, final Integer port, final Integer tenantID,
                            final OVXSwitch virtualSwitch) {
         PhysicalSwitchPort myPSP = new PhysicalSwitchPort(physicalSwitch, port, tenantID);
+        this.physicalSwitchPortMap.put(myPSP, virtualSwitch);
         System.out.println("Mapping ("+ physicalSwitch.getSwitchName()+ ", " + port+","+ tenantID+" ):"+virtualSwitch.getSwitchName());
     }
 
@@ -483,6 +484,12 @@ public final class OVXMap implements Mappable {
     public OVXSwitch getVirtualSwitch(final PhysicalSwitch physicalSwitch,
                                       final Integer port, final Integer tenantId) throws SwitchMappingException {
         PhysicalSwitchPort myPSP = new PhysicalSwitchPort(physicalSwitch, port, tenantId);
+        System.out.println("getting Mapping of ("+ physicalSwitch.getSwitchName()+ ", " + port+","+ tenantId);
+        System.out.println("Dumping the physicalSwitchPortMap..");
+        Set<PhysicalSwitchPort> psps = this.physicalSwitchPortMap.keySet();
+        for (PhysicalSwitchPort psp : psps) {
+            System.out.println(psp.toString() + "  "+ physicalSwitchPortMap.get(psp));
+        }
         OVXSwitch vsw = this.physicalSwitchPortMap.get(myPSP);
 
         if (vsw == null) {
@@ -824,6 +831,8 @@ public final class OVXMap implements Mappable {
      * @return true if the MAC is registered, false otherwise
      */
     public boolean hasMAC(MACAddress mac) {
+        //System.out.println("MacMap : "+ this.macMap.toString());
+        System.out.println("Checking for MAc : "+mac.toString());
         return this.macMap.getValueForExactKey(mac.toStringNoColon()) != null;
     }
 

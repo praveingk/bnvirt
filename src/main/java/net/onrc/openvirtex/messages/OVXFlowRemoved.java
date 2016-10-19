@@ -38,7 +38,8 @@ public class OVXFlowRemoved extends OFFlowRemoved implements Virtualizable {
             return;
         }
         try {
-            OVXSwitch vsw = sw.getMap().getVirtualSwitch(sw, tid);
+            int inport = (int) this.getMatch().getInputPort();
+            OVXSwitch vsw = sw.getMap().getVirtualSwitch(sw, inport, tid);
             /*
              * If we are a Big Switch we might receive multiple same-cookie FR's
              * from multiple PhysicalSwitches. Only handle if the FR's newly

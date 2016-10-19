@@ -408,6 +408,7 @@ public class OVXNetwork extends Network<OVXSwitch, OVXPort, OVXLink> implements
             final short ovxDstPort, final String alg, final byte numBackups,
             final int linkId) throws IndexOutOfBoundException,
             PortMappingException {
+        System.out.println("Inside connectLink");
         RoutingAlgorithms algorithm = null;
         try {
             algorithm = new RoutingAlgorithms(alg, numBackups);
@@ -421,16 +422,19 @@ public class OVXNetwork extends Network<OVXSwitch, OVXPort, OVXLink> implements
                 return null;
             }
         }
-
+        System.out.println("Going to find out the ports..");
         // get the virtual end ports
         OVXPort srcPort = this.getSwitch(ovxSrcDpid).getPort(ovxSrcPort);
         OVXPort dstPort = this.getSwitch(ovxDstDpid).getPort(ovxDstPort);
-
+        System.out.println("going to create links..");
+        System.out.println(srcPort.toString());
+        System.out.println(dstPort.toString());
         // Create link, add it to the topology, register it in the map
         OVXLink link = new OVXLink(linkId, this.tenantId, srcPort, dstPort,
                 algorithm);
         OVXLink reverseLink = new OVXLink(linkId, this.tenantId, dstPort,
                 srcPort, algorithm);
+        System.out.println("Done with creation of link and reverse");
         super.addLink(link);
         super.addLink(reverseLink);
         log.info(
@@ -442,6 +446,10 @@ public class OVXNetwork extends Network<OVXSwitch, OVXPort, OVXLink> implements
         dstPort.setEdge(false);
         srcPort.boot();
         dstPort.boot();
+
+        System.out.println("Booting up the ports after connecting the link");
+        System.out.println(srcPort.toString());
+        System.out.print(dstPort.toString());
         return link;
     }
 
@@ -617,6 +625,7 @@ public class OVXNetwork extends Network<OVXSwitch, OVXPort, OVXLink> implements
             return false;
         }
         for (final OVXSwitch sw : this.getSwitches()) {
+            System.out.println("Booting "+ Long.toHexString(sw.getSwitchId()));
             result &= sw.boot();
         }
         this.isBooted = result;

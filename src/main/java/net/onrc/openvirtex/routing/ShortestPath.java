@@ -452,6 +452,9 @@ public class ShortestPath implements Routable {
         PhysicalPort dstPathPort = PhysicalNetwork.getInstance()
                 .getNeighborPort(ovxLink.getDstPort().getPhysicalPort());
         if ((srcPathPort == null) || (dstPathPort == null)) {
+            System.out.println("Null neighbor!!!");
+            System.out.println(srcPathPort);
+            System.out.println(dstPathPort);
             throw new PortMappingException(
                     "Virtual link is mapped to missing endpoint(s)");
         }

@@ -58,9 +58,10 @@ public class OVXPort extends Port<OVXSwitch, OVXLink> implements Persistable {
         this.tenantId = tenantId;
         this.physicalPort = port;
         try {
-            // Pravein : API
+            // Pravein : API changing to New API, due to mapping of phys_dpid, port to virt_dpid.
+            //System.out.println("Getting vswitch mapping of "+ Long.toHexString(physicalPort.getParentSwitch().getSwitchId()) + ", "+ physicalPort.getPortNumber());
             this.parentSwitch = OVXMap.getInstance().getVirtualSwitch(
-                    port.getParentSwitch(), port, tenantId);
+                    port.getParentSwitch(),(int) physicalPort.getPortNumber(), tenantId);
         } catch (SwitchMappingException e) {
             // something pretty wrong if we get here. Not 100% on how to handle
             // this
@@ -391,6 +392,7 @@ public class OVXPort extends Port<OVXSwitch, OVXLink> implements Persistable {
     public void handlePortEnable(OVXPortStatus stat)
             throws NetworkMappingException {
         log.debug("enabling port {}", this.getPortNumber());
+        //System.out.println("Enabling port.." + this.getPortNumber());
         OVXNetwork virtualNetwork = this.parentSwitch.getMap()
                 .getVirtualNetwork(this.tenantId);
         Host h = virtualNetwork.getHost(this);

@@ -54,6 +54,7 @@ public final class PhysicalNetwork extends
     private final ConcurrentHashMap<Long, SwitchDiscoveryManager> discoveryManager;
     private static HashedWheelTimer timer;
     private static Logger log = LogManager.getLogger(PhysicalNetwork.class.getName());
+    private boolean isLoopInitialized = false;
 
     private PhysicalNetwork() {
         PhysicalNetwork.log.info("Starting network discovery...");
@@ -176,6 +177,8 @@ public final class PhysicalNetwork extends
             final PhysicalLink link = new PhysicalLink(srcPort, dstPort);
             OVXMap.getInstance().knownLink(link);
             super.addLink(link);
+            System.out.println("Adding a physical link b/w "+ link.getSrcSwitch().getSwitchName()+":"+ link.getSrcPort().getPortNumber()
+                    +" and "+ link.getDstSwitch().getSwitchName()+":"+link.getDstPort().getPortNumber());
             log.info("Adding physical link between {}/{} and {}/{}", link
                     .getSrcSwitch().getSwitchName(), link.getSrcPort()
                     .getPortNumber(), link.getDstSwitch().getSwitchName(), link
@@ -185,6 +188,9 @@ public final class PhysicalNetwork extends
                     new DPIDandPort(dstPort.getParentSwitch().getSwitchId(),
                             dstPort.getPortNumber()));
             DBManager.getInstance().addLink(dpp);
+            System.out.println("Neighbor ports..");
+            System.out.println(this.getNeighborPort(srcPort));
+            System.out.println(this.getNeighborPort(dstPort));
         }
     }
 
@@ -230,7 +236,7 @@ public final class PhysicalNetwork extends
      * SwitchDisoveryManager (which sent the original LLDP packet).
      *
      * @param msg the LLDP packet in
-     * @param the switch
+     * @param sw the Switch
      */
     @SuppressWarnings("rawtypes")
     @Override
@@ -255,7 +261,16 @@ public final class PhysicalNetwork extends
 
     @Override
     public boolean boot() {
+        System.out.println("Physical Network is Booted..");
         return true;
+    }
+
+    public void initializeLoopPorts() {
+        if (!isLoopInitialized) {
+            System.out.println("Initializing Loop ports..");
+            isLoopInitialized = true;
+            LoopNetwork.initialize();
+        }
     }
 
     /**

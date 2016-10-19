@@ -14,7 +14,7 @@ public class PhysicalSwitchPort {
         this.physicalSwitch = physicalSwitch;
         this.port = port;
         this.tenantID = tenantID;
-        hc =  this.physicalSwitch.getSwitchName()+","+this.port+","+this.tenantID;
+        hc =  this.physicalSwitch.getSwitchId()+","+this.port+","+this.tenantID;
 
     }
 
@@ -27,14 +27,14 @@ public class PhysicalSwitchPort {
     @Override
     public boolean equals(Object arg) {
         PhysicalSwitchPort comparePSP = (PhysicalSwitchPort) arg;
-        if (this.physicalSwitch.equals(comparePSP.physicalSwitch) &&
+        if (this.physicalSwitch.getSwitchId().equals(comparePSP.physicalSwitch.getSwitchId()) &&
                 this.port == comparePSP.port && this.tenantID == comparePSP.tenantID) {
-            return true;
+                return true;
         }
         return false;
     }
     public String toString() {
-        return "("+physicalSwitch.getSwitchName()+", "+ port+","+tenantID+" )";
+        return "("+physicalSwitch.getSwitchId()+", "+ port+","+tenantID+" )";
     }
 
 }

@@ -23,7 +23,11 @@ import net.onrc.openvirtex.api.service.handlers.HandlerUtils;
 import net.onrc.openvirtex.api.service.handlers.TenantHandler;
 import net.onrc.openvirtex.elements.OVXMap;
 import net.onrc.openvirtex.elements.link.OVXLink;
+import net.onrc.openvirtex.elements.network.LoopNetwork;
 import net.onrc.openvirtex.elements.network.OVXNetwork;
+import net.onrc.openvirtex.elements.network.PhysicalNetwork;
+import net.onrc.openvirtex.elements.port.OVXPort;
+import net.onrc.openvirtex.elements.port.PhysicalPort;
 import net.onrc.openvirtex.exceptions.IndexOutOfBoundException;
 import net.onrc.openvirtex.exceptions.InvalidDPIDException;
 import net.onrc.openvirtex.exceptions.InvalidPortException;
@@ -46,7 +50,7 @@ public class ConnectOVXLink extends ApiHandler<Map<String, Object>> {
     @Override
     public JSONRPC2Response process(final Map<String, Object> params) {
         JSONRPC2Response resp = null;
-
+        System.out.println("Inside ConnectOVXLink...");
         try {
             final Number tenantId = HandlerUtils.<Number>fetchField(
                     TenantHandler.TENANT, params, true, null);
@@ -74,10 +78,24 @@ public class ConnectOVXLink extends ApiHandler<Map<String, Object>> {
             HandlerUtils.isValidOVXPort(tenantId.intValue(),
                     dstDpid.longValue(), dstPort.shortValue());
 
+            //System.out.println("Got here");
             final OVXMap map = OVXMap.getInstance();
             final OVXNetwork virtualNetwork = map.getVirtualNetwork(tenantId
                     .intValue());
 
+           // PhysicalNetwork myNet = PhysicalNetwork.getInstance();
+           // myNet.initializeLoopPorts();
+//            if (LoopNetwork.IsLoop(srcDpid.longValue(), srcPort.shortValue(),
+//                    dstDpid.longValue(), dstPort.shortValue())) {
+//                System.out.println("This is a loop port pair.. Lazy link Creation now");
+//                PhysicalNetwork myNet = PhysicalNetwork.getInstance();
+//                PhysicalPort sPort = myNet.getSwitch(srcDpid.longValue()).getPort(srcPort.shortValue());
+//                PhysicalPort dPort = myNet.getSwitch(dstDpid.longValue()).getPort(dstPort.shortValue());
+//                System.out.println("Creating Link now ");
+//                myNet.createLink(sPort,dPort);
+//
+//            }
+            System.out.println("Connecting a virtualLink");
             final OVXLink virtualLink = virtualNetwork.connectLink(
                     srcDpid.longValue(), srcPort.shortValue(),
                     dstDpid.longValue(), dstPort.shortValue(), alg,
@@ -85,6 +103,7 @@ public class ConnectOVXLink extends ApiHandler<Map<String, Object>> {
 
 
             if (virtualLink == null) {
+                System.out.println("Virtual Link is null.. Probably not supposed to create this link..");
                 resp = new JSONRPC2Response(
                         new JSONRPC2Error(
                                 JSONRPC2Error.INTERNAL_ERROR.getCode(),
@@ -132,6 +151,7 @@ public class ConnectOVXLink extends ApiHandler<Map<String, Object>> {
                             this.cmdName() + ": Invalid virtual switch id : "
                                     + e.getMessage()), 0);
         } catch (final MappingException e) {
+            e.printStackTrace();
             resp = new JSONRPC2Response(new JSONRPC2Error(
                     JSONRPC2Error.INVALID_PARAMS.getCode(), this.cmdName()
                             + ": " + e.getMessage()), 0);

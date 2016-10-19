@@ -75,6 +75,7 @@ public class CreateOVXSwitch extends ApiHandler<Map<String, Object>> {
 
 
             HandlerUtils.isValidDPID(tenantId.intValue(), longDpids);
+            System.out.println("Came here..");
             final OVXSwitch ovxSwitch;
             if (dp == 0) {
                 ovxSwitch = virtualNetwork.createSwitch(longDpids);

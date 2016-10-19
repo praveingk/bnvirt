@@ -181,6 +181,8 @@ public abstract class Network<T1 extends Switch, T2 extends Port, T3 extends Lin
      * @return the neighbour port
      */
     public T2 getNeighborPort(final T2 port) {
+//        System.out.println("Getting NeighborPort map");
+//        System.out.println(this.neighborPortMap.toString());
         return this.neighborPortMap.get(port);
     }
 
