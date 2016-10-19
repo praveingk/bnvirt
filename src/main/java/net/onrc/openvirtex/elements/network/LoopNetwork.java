@@ -30,11 +30,17 @@ public class LoopNetwork {
 
     public static void initialize() {
         System.out.println("Initializing Loop ports..");
-
-        DPIDandPort srcDP = new DPIDandPort(new Long(0x1000b05ada295280L), (short)25);
-        DPIDandPort dstDP = new DPIDandPort(new Long(0x1000b05ada295280L), (short)26);
-        DPIDandPortPair loopPair = new DPIDandPortPair(srcDP,dstDP);
-        loopPorts.add(loopPair);
+        int totalLoopPorts = 11;
+        for (short i=0;i< totalLoopPorts;i++) {
+            short port = 25;
+            DPIDandPort srcDP = new DPIDandPort(new Long(0x000170106f954f00L), (short) (port));
+            port++;
+            DPIDandPort dstDP = new DPIDandPort(new Long(0x000170106f954f00L), (short) (port));
+            DPIDandPortPair loopPair = new DPIDandPortPair(srcDP, dstDP);
+            loopPorts.add(loopPair);
+            System.out.println(loopPair.toString());
+            port++;
+        }
         isInitialized = true;
         PhysicalNetwork myNet = PhysicalNetwork.getInstance();
         for (int i=0;i< loopPorts.size();i++) {
