@@ -1,7 +1,6 @@
 /*******************************************************************************
  * Copyright 2014 Open Networking Laboratory
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
+ *se Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
@@ -47,12 +46,16 @@ public class OVXPacketOut extends OFPacketOut implements Devirtualizable {
             .getName());
     private OFMatch match = null;
     private final List<OFAction> approvedActions = new LinkedList<OFAction>();
+    private OVXPort inport = null;
 
     @Override
     public void devirtualize(final OVXSwitch sw) {
 
         final OVXPort inport = sw.getPort(this.getInPort());
+        this.inport = inport;
         OVXMatch ovxMatch = null;
+
+        System.out.println("Inside OVXPacketOut : inPort(phys)="+ inport.getPhysicalPortNumber());
 
         if (this.getBufferId() == OVXPacketOut.BUFFER_ID_NONE) {
             if (this.getPacketData().length <= 14) {
@@ -86,21 +89,32 @@ public class OVXPacketOut extends OFPacketOut implements Devirtualizable {
             }
         }
 
+        System.out.println("OutputList : "+this.getActions().toString());
+
         for (final OFAction act : this.getActions()) {
             try {
+                System.out.println("Actions : "+ act.toString());
+                if (act.getType().getTypeValue() == 0) {
+                    OFActionOutput outAction = (OFActionOutput)act;
+                    System.out.println("Output : "+outAction.getPort());
+                }
                 ((VirtualizableAction) act).virtualize(sw,
                         this.approvedActions, ovxMatch);
-
+                System.out.println("Finished virtualization..");
             } catch (final ActionVirtualizationDenied e) {
                 this.log.warn("Action {} could not be virtualized; error: {}",
                         act, e.getMessage());
+                System.out.println("$$$$$$$$$$$$$$$$$$$ virt denied...");
                 sw.sendMsg(OVXMessageUtil.makeError(e.getErrorCode(), this), sw);
                 return;
             } catch (final DroppedMessageException e) {
-                this.log.debug("Dropping packetOut {}", this);
+                this.log.debug("####################Dropping packetOut {}", this);
+                System.out.println("Dropping Packet.. for sw "+ sw.getName());
+                e.printStackTrace();
                 return;
             }
         }
+        System.out.println("Got Out of Loop of filling actions for sw : "+ sw.getName());
 
         if (U16.f(this.getInPort()) < U16.f(OFPort.OFPP_MAX.getValue())) {
             this.setInPort(inport.getPhysicalPortNumber());
@@ -121,6 +135,36 @@ public class OVXPacketOut extends OFPacketOut implements Devirtualizable {
             OVXMessageUtil.translateXid(this, inport);
         }
         this.log.debug("Sending packet-out to sw {}: {}", sw.getName(), this);
+        System.out.println("Sending packet-out to sw {"+sw.getName()+"}+ {"+ this+"}" + "Inport = "+inport.getPhysicalPortNumber());
+        sw.sendSouth(this, inport);
+        System.out.println("Finished sendSouth, returning call");
+    }
+
+    public void sendPacketsOut(final OVXSwitch sw) {
+        if (this.approvedActions.size() == 0) {
+            System.out.println("No action.. clear");
+            return;
+        }
+        if (U16.f(this.getInPort()) < U16.f(OFPort.OFPP_MAX.getValue())) {
+            this.setInPort(this.inport.getPhysicalPortNumber());
+        }
+        this.prependRewriteActions(sw);
+        this.setActions(this.approvedActions);
+        this.setActionsLength((short) 0);
+        this.setLengthU(OVXPacketOut.MINIMUM_LENGTH + this.packetData.length);
+        for (final OFAction act : this.approvedActions) {
+            this.setLengthU(this.getLengthU() + act.getLengthU());
+            this.setActionsLength((short) (this.getActionsLength() + act
+                    .getLength()));
+        }
+
+        // TODO: Beacon sometimes send msg with inPort == controller, check with
+        // Ayaka if it's ok
+        if (U16.f(this.getInPort()) < U16.f(OFPort.OFPP_MAX.getValue())) {
+            OVXMessageUtil.translateXid(this, inport);
+        }
+        this.log.debug("Sending packet-out to sw {}: {}", sw.getName(), this);
+        System.out.println("Sending packet-out to sw {"+sw.getName()+"}+ {"+ this+"}" + "Inport = "+inport.getPhysicalPortNumber());
         sw.sendSouth(this, inport);
     }
 

@@ -117,7 +117,9 @@ public class OVXMessageFactory extends BasicFactory {
         if (t == null) {
             return new OVXUnknownMessage();
         }
+
         final byte mtype = t.getTypeValue();
+        //System.out.println("Got a message OFType : "+mtype);
         if (mtype >= OVXMessageFactory.CONVERT_MAP.length) {
             throw new IllegalArgumentException("OFMessage type " + mtype
                     + " unknown to OVX");

@@ -21,6 +21,7 @@ import net.onrc.openvirtex.elements.address.IPMapper;
 import net.onrc.openvirtex.elements.address.PhysicalIPAddress;
 import net.onrc.openvirtex.elements.datapath.OVXSwitch;
 import net.onrc.openvirtex.exceptions.ActionVirtualizationDenied;
+import net.onrc.openvirtex.messages.OVXPacketOut;
 import net.onrc.openvirtex.protocol.OVXMatch;
 
 import org.apache.logging.log4j.LogManager;

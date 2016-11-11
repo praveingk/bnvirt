@@ -84,8 +84,8 @@ public class PhysicalPort extends Port<PhysicalSwitch, PhysicalLink> {
         if (this.ovxPortMap.get(tenantId) == null) {
             return null;
         }
-        //System.out.println("Pravein : Dumping OVX Ports for tenant "+ tenantId);
-        //System.out.println(this.ovxPortMap.get(tenantId).toString());
+        System.out.println("Pravein : Dumping OVX Ports for tenant "+ tenantId);
+        System.out.println(this.ovxPortMap.get(tenantId).toString());
 
         OVXPort p = this.ovxPortMap.get(tenantId).get(vLinkId);
 

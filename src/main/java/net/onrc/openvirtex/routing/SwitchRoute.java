@@ -319,6 +319,7 @@ Persistable {
         // This list includes all the actions that have to be applied at the end
         // of the route
         final LinkedList<OFAction> outActions = new LinkedList<OFAction>();
+        System.out.println("Pravein : Generate Route FMs");
         /*
          * Check the outPort: - if it's an edge, configure the route's last FM
          * to rewrite the IPs and generate the route FMs - if it's a link: -
@@ -439,6 +440,7 @@ Persistable {
      */
     private void generateFirstFM(OVXFlowMod fm) {
         fm.setBufferId(OFPacketOut.BUFFER_ID_NONE);
+        System.out.println("Pravein : Generating First FM");
         final List<OFAction> approvedActions = new LinkedList<OFAction>();
         if (this.getSrcPort().isLink()) {
             OVXPort dstPort = null;

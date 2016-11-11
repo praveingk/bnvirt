@@ -49,7 +49,7 @@ public final class IPMapper {
     public static Integer getPhysicalIp(Integer tenantId, Integer virtualIP) {
         final Mappable map = OVXMap.getInstance();
         final OVXIPAddress vip = new OVXIPAddress(tenantId, virtualIP);
-        System.out.println("Pravein: Getting Physical IP for tenant:"+tenantId+ " virtIP:"+virtualIP);
+        //System.out.println("Pravein: Getting Physical IP for tenant:"+tenantId+ " virtIP:"+virtualIP);
         try {
             PhysicalIPAddress pip;
             if (map.hasPhysicalIP(vip, tenantId)) {
@@ -75,9 +75,9 @@ public final class IPMapper {
     }
 
     public static void rewriteMatch(final Integer tenantId, final OFMatch match) {
-        System.out.println("Pravein: Rewriting match.. to set n/w source to "+
-                       getPhysicalIp(tenantId, match.getNetworkSource()).toString()+
-        " and n/w dest to "+ getPhysicalIp(tenantId, match.getNetworkDestination()).toString());
+//        System.out.println("Pravein: Rewriting match.. to set n/w source to "+
+//                       getPhysicalIp(tenantId, match.getNetworkSource()).toString()+
+//        " and n/w dest to "+ getPhysicalIp(tenantId, match.getNetworkDestination()).toString());
 
         System.out.println("Ignoring IP Translations..");
 //        match.setNetworkSource(getPhysicalIp(tenantId, match.getNetworkSource()));
@@ -88,9 +88,9 @@ public final class IPMapper {
     public static List<OFAction> prependRewriteActions(final Integer tenantId,
             final OFMatch match) {
         final List<OFAction> actions = new LinkedList<OFAction>();
-        System.out.println("Pravein: Rewriting Action.. to set n/w source to "+
-                getPhysicalIp(tenantId, match.getNetworkSource()).toString()+
-                " and n/w dest to "+ getPhysicalIp(tenantId, match.getNetworkDestination()).toString());
+//        System.out.println("Pravein: Rewriting Action.. to set n/w source to "+
+//                getPhysicalIp(tenantId, match.getNetworkSource()).toString()+
+//                " and n/w dest to "+ getPhysicalIp(tenantId, match.getNetworkDestination()).toString());
         System.out.println("Ignoring IP Translations..");
 //        if (!match.getWildcardObj().isWildcarded(Flag.NW_SRC)) {
 //            final OVXActionNetworkLayerSource srcAct = new OVXActionNetworkLayerSource();
@@ -109,9 +109,9 @@ public final class IPMapper {
 
     public static List<OFAction> prependUnRewriteActions(final OFMatch match) {
         final List<OFAction> actions = new LinkedList<OFAction>();
-        System.out.println("Pravein: UnRewriting Action.. to set n/w source to "+
-                match.getNetworkSource()+
-                " and n/w dest to "+ match.getNetworkDestination());
+//        System.out.println("Pravein: UnRewriting Action.. to set n/w source to "+
+//                match.getNetworkSource()+
+//                " and n/w dest to "+ match.getNetworkDestination());
         System.out.println("Ignoring IP Translation..");
 //        if (!match.getWildcardObj().isWildcarded(Flag.NW_SRC)) {
 //            final OVXActionNetworkLayerSource srcAct = new OVXActionNetworkLayerSource();

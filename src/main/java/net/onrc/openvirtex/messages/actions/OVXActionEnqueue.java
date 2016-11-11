@@ -19,6 +19,7 @@ import java.util.List;
 
 import net.onrc.openvirtex.elements.datapath.OVXSwitch;
 import net.onrc.openvirtex.exceptions.ActionVirtualizationDenied;
+import net.onrc.openvirtex.messages.OVXPacketOut;
 import net.onrc.openvirtex.protocol.OVXMatch;
 
 import org.openflow.protocol.action.OFAction;

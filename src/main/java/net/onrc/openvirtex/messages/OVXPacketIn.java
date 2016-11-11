@@ -285,6 +285,7 @@ public class OVXPacketIn extends OFPacketIn implements Virtualizable {
                 this.setLengthU(OFPacketIn.MINIMUM_LENGTH
                         + this.packetData.length);
             }
+            System.out.println("Pravein : Sending msg to Switch.. port= "+ this.port.getPortNumber() + " phys ovx = "+ this.ovxPort.getPhysicalPortNumber());
             vSwitch.sendMsg(this, sw);
         } else if (this.port == null) {
             log.error("The port {} doesn't belong to the physical switch {}",
