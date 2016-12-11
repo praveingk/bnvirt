@@ -19,6 +19,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import net.onrc.openvirtex.elements.Mapper.TenantMapper;
 import net.onrc.openvirtex.elements.address.IPMapper;
 import net.onrc.openvirtex.elements.datapath.OVXBigSwitch;
 import net.onrc.openvirtex.elements.datapath.OVXSwitch;
@@ -40,6 +41,7 @@ import net.onrc.openvirtex.routing.SwitchRoute;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.openflow.protocol.OFMatch;
 import org.openflow.protocol.OFPort;
 import org.openflow.protocol.Wildcards.Flag;
 import org.openflow.protocol.action.OFAction;
@@ -60,11 +62,13 @@ VirtualizableAction {
         System.out.println("Pravein: ovxMatch ="+ match.toString());
         final OVXPort inPort = sw.getPort(match.getInputPort());
 
-        System.out.println("Pravein: Input Port : "+inPort.getPhysicalPortNumber() +" Port used : "+this.getPort());
+
+        System.out.println("Pravein: Input Port : "+inPort.getPhysicalPortNumber() +" outPort used : "+this.getPort());
         // TODO: handle TABLE output port here
 
         final LinkedList<OVXPort> outPortList = this.fillPortList(
                 match.getInputPort(), this.getPort(), sw);
+
         final OVXNetwork vnet;
         try {
             vnet = sw.getMap().getVirtualNetwork(sw.getTenantId());
@@ -75,7 +79,7 @@ VirtualizableAction {
         }
 
         if (match.isFlowMod()) {
-            System.out.println("Pravein: FlowMod");
+            System.out.println("Pravein: Its a FlowMod");
             /*
              * FlowMod management Iterate through the output port list. Two main
              * scenarios: - OVXSwitch is BigSwitch and inPort & outPort belongs
@@ -89,6 +93,7 @@ VirtualizableAction {
                 fm = sw.getFlowMod(match.getCookie());
             } catch (MappingException e) {
                 log.warn("FlowMod not found in our FlowTable");
+                //log.warn("However, considering our change, we allow it for now.");
                 return;
             }
             fm.setCookie(match.getCookie());
@@ -174,8 +179,7 @@ VirtualizableAction {
                             // TODO: this is logically incorrect, i have to do
                             // this because we always add the rewriting actions
                             // in the flowMod. Change it.
-                            approvedActions.addAll(IPMapper
-                                    .prependUnRewriteActions(match));
+                            TenantMapper.prependUnRewriteActions(match, approvedActions);
                         } else {
                             /*
                              * If inPort is edge and outPort is link:
@@ -187,6 +191,7 @@ VirtualizableAction {
                             final OVXLink link = outPort.getLink().getOutLink();
                             linkId = link.getLinkId();
                             try {
+                                System.out.println("Filling out port..");
                                 flowId = vnet.getFlowManager().storeFlowValues(
                                         match.getDataLayerSource(),
                                         match.getDataLayerDestination());
@@ -211,8 +216,7 @@ VirtualizableAction {
                              * - add actions to current FM to restore packet fields
                              * related to the link
                              */
-                            approvedActions.addAll(IPMapper
-                                    .prependUnRewriteActions(match));
+                            TenantMapper.prependUnRewriteActions(match, approvedActions);
                             // rewrite the OFMatch with the values of the link
                             final OVXPort dstPort = vnet
                                     .getNeighborPort(inPort);
@@ -368,8 +372,7 @@ VirtualizableAction {
                     System.out.println("---------------------------------------------------------------------------");
                     System.out.println("Its an edgePort!!");
                     throwException = false;
-                    approvedActions.addAll(IPMapper
-                            .prependUnRewriteActions(match));
+                    TenantMapper.prependUnRewriteActions(match, approvedActions);
                     approvedActions.add(new OFActionOutput(outPort
                             .getPhysicalPortNumber()));
                     System.out.println("Approved Action  : "+ approvedActions.toString() + " will now send the packet to "+ outPort.getPhysicalPortNumber());

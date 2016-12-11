@@ -32,6 +32,7 @@ public class OVXActionStripVirtualLan extends OFActionStripVirtualLan implements
     public void virtualize(final OVXSwitch sw,
             final List<OFAction> approvedActions, final OVXMatch match)
             throws ActionVirtualizationDenied {
+
         approvedActions.add(this);
     }
 

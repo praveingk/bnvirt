@@ -13,116 +13,240 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package net.onrc.openvirtex.elements.address;
-
-import java.util.LinkedList;
-import java.util.List;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.openflow.protocol.OFMatch;
-import org.openflow.protocol.Wildcards.Flag;
-import org.openflow.protocol.action.OFAction;
+package net.onrc.openvirtex.elements.Mapper;
 
 import net.onrc.openvirtex.elements.Mappable;
 import net.onrc.openvirtex.elements.OVXMap;
-import net.onrc.openvirtex.exceptions.IndexOutOfBoundException;
+import net.onrc.openvirtex.elements.address.OVXIPAddress;
+import net.onrc.openvirtex.elements.address.PhysicalIPAddress;
 import net.onrc.openvirtex.exceptions.AddressMappingException;
+import net.onrc.openvirtex.exceptions.IndexOutOfBoundException;
 import net.onrc.openvirtex.exceptions.NetworkMappingException;
-import net.onrc.openvirtex.messages.actions.OVXActionNetworkLayerDestination;
 import net.onrc.openvirtex.messages.actions.OVXActionNetworkLayerSource;
+import net.onrc.openvirtex.messages.actions.OVXActionStripVirtualLan;
+import net.onrc.openvirtex.messages.actions.OVXActionVirtualLanIdentifier;
+import net.onrc.openvirtex.packet.Ethernet;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.openflow.protocol.OFMatch;
+import org.openflow.protocol.Wildcards;
+import org.openflow.protocol.action.OFAction;
+import org.openflow.protocol.action.OFActionType;
+
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Utility class for IP mapping operations. Implements methods
  * rewrite or add actions for IP translation.
  */
-public final class IPMapper {
-    private static Logger log = LogManager.getLogger(IPMapper.class.getName());
+public final class TenantMapper {
+    private static Logger log = LogManager.getLogger(TenantMapper.class.getName());
 
+
+    private static ConcurrentHashMap<OVXVlan, Short> OVXVlanMap = new ConcurrentHashMap<>();
+    private static ConcurrentHashMap<Short, OVXVlan> ReverseOVXVlanMap = new ConcurrentHashMap<>();
+
+    private static HashSet<Short> usedVlans = new HashSet<>();
+    private static short startVlan = 2010;
+    private static short endVlan = 4094;
     /**
      * Overrides default constructor to no-op private constructor.
      * Required by checkstyle.
      */
-    private IPMapper() {
+    private TenantMapper() {
     }
 
-    public static Integer getPhysicalIp(Integer tenantId, Integer virtualIP) {
-        final Mappable map = OVXMap.getInstance();
-        final OVXIPAddress vip = new OVXIPAddress(tenantId, virtualIP);
-        //System.out.println("Pravein: Getting Physical IP for tenant:"+tenantId+ " virtIP:"+virtualIP);
-        try {
-            PhysicalIPAddress pip;
-            if (map.hasPhysicalIP(vip, tenantId)) {
-                pip = map.getPhysicalIP(vip, tenantId);
-            } else {
-                pip = new PhysicalIPAddress(map.getVirtualNetwork(tenantId)
-                        .nextIP());
-                log.info("Adding IP mapping {} -> {} for tenant {}", vip, pip,
-                        tenantId);
-                map.addIP(pip, vip);
-            }
-            return pip.getIp();
-        } catch (IndexOutOfBoundException e) {
-            log.error(
-                    "No available physical IPs for virtual ip {} in tenant {}",
-                    vip, tenantId);
-        } catch (NetworkMappingException e) {
-            log.error(e);
-        } catch (AddressMappingException e) {
-            log.error("Inconsistency in Physical-Virtual mapping : {}", e);
+    public static synchronized short getPhysicalVlan(Integer tenantId, short vlan) {
+        OVXVlan myOVXVlan = new OVXVlan(tenantId, vlan);
+        System.out.println("Getting the phys vlan for "+ myOVXVlan.toString());
+        if (OVXVlanMap.get(myOVXVlan) != null) {
+            System.out.println("Returning existing vlan..");
+            return OVXVlanMap.get(myOVXVlan);
         }
-        return 0;
+
+        short myPhysVlan = getFreeVlan();
+        OVXVlanMap.put(myOVXVlan,myPhysVlan);
+        ReverseOVXVlanMap.put(myPhysVlan, myOVXVlan);
+        dumpOVXVlanMap();
+        return myPhysVlan;
+    }
+
+    public static short getOrigVlan(short vlan) {
+        return (short) ReverseOVXVlanMap.get(vlan).getVlan();
+    }
+
+    public static synchronized void clearTenantVlans(int tenantId) {
+        Set<OVXVlan> ovxvlans = OVXVlanMap.keySet();
+        for (OVXVlan ovxvlan : ovxvlans) {
+            if (ovxvlan.getTenantId() == tenantId) {
+                Short vlan = OVXVlanMap.get(ovxvlan);
+                System.out.println("Removing vlan "+ vlan);
+                usedVlans.remove(vlan);
+                ReverseOVXVlanMap.remove(vlan);
+                OVXVlanMap.remove(ovxvlan);
+                System.out.println("Cleared Vlan tables of   tenant "+ tenantId);
+
+            }
+        }
+        dumpOVXVlanMap();
+    }
+
+    public static synchronized short getFreeVlan() {
+        for (short i=startVlan;i <= endVlan ;i++) {
+            if (!usedVlans.contains(i)) {
+                usedVlans.add(i);
+                return i;
+            } else {
+                System.out.println("Used vlan : "+ i);
+            }
+
+        }
+        return -1;
     }
 
     public static void rewriteMatch(final Integer tenantId, final OFMatch match) {
-//        System.out.println("Pravein: Rewriting match.. to set n/w source to "+
-//                       getPhysicalIp(tenantId, match.getNetworkSource()).toString()+
-//        " and n/w dest to "+ getPhysicalIp(tenantId, match.getNetworkDestination()).toString());
+        short vlan = 1;
+        if (!match.getWildcardObj().isWildcarded(Wildcards.Flag.DL_VLAN)) {
+            vlan  = match.getDataLayerVirtualLan();
+        }
+        System.out.println("Pravein: Rewriting match.. setting vlan to "+getPhysicalVlan(tenantId, vlan));
+        int wcard = match.getWildcards()
+                & (~OFMatch.OFPFW_DL_VLAN);
+        match.setWildcards(wcard);
+        match.setDataLayerVirtualLan(getPhysicalVlan(tenantId, vlan));
 
-        System.out.println("Ignoring IP Translations..");
-//        match.setNetworkSource(getPhysicalIp(tenantId, match.getNetworkSource()));
-//        match.setNetworkDestination(getPhysicalIp(tenantId,
-//                match.getNetworkDestination()));
+
     }
 
-    public static List<OFAction> prependRewriteActions(final Integer tenantId,
-            final OFMatch match) {
+    public static void dumpOVXVlanMap() {
+        Set<OVXVlan> ovxVlanSet = OVXVlanMap.keySet();
+        System.out.println("OVX VLan Map :");
+        for (OVXVlan ovxvlan : ovxVlanSet) {
+            System.out.println(ovxvlan.toString() + " -> "+ OVXVlanMap.get(ovxvlan));
+        }
+
+    }
+
+    public static void prependRewriteActions(final Integer tenantId, final OFMatch match, List<OFAction> approvedActions) {
         final List<OFAction> actions = new LinkedList<OFAction>();
-//        System.out.println("Pravein: Rewriting Action.. to set n/w source to "+
-//                getPhysicalIp(tenantId, match.getNetworkSource()).toString()+
-//                " and n/w dest to "+ getPhysicalIp(tenantId, match.getNetworkDestination()).toString());
-        System.out.println("Ignoring IP Translations..");
-//        if (!match.getWildcardObj().isWildcarded(Flag.NW_SRC)) {
-//            final OVXActionNetworkLayerSource srcAct = new OVXActionNetworkLayerSource();
-//            srcAct.setNetworkAddress(getPhysicalIp(tenantId,
-//                    match.getNetworkSource()));
-//            actions.add(srcAct);
+//        short vlan  = 1;
+//        final OVXActionVirtualLanIdentifier ovlan = new OVXActionVirtualLanIdentifier();
+//        if (!match.getWildcardObj().isWildcarded(Wildcards.Flag.DL_VLAN)) {
+//            vlan = match.getDataLayerVirtualLan();
 //        }
-//        if (!match.getWildcardObj().isWildcarded(Flag.NW_DST)) {
-//            final OVXActionNetworkLayerDestination dstAct = new OVXActionNetworkLayerDestination();
-//            dstAct.setNetworkAddress(getPhysicalIp(tenantId,
-//                    match.getNetworkDestination()));
-//            actions.add(dstAct);
-//        }
-        return actions;
+//        System.out.println("Pravein: Rewriting Action.. to set vlan ID "+ vlan + " to "+ getPhysicalVlan(tenantId, vlan));
+//
+//        ovlan.setVirtualLanIdentifier(getPhysicalVlan(tenantId, vlan));
+//
+//        actions.add(0, ovlan);
+//        System.out.println("Actions : "+ actions.toString());
+//        return actions;
+        final OVXActionVirtualLanIdentifier ovlan = new OVXActionVirtualLanIdentifier();
+        boolean match_vlan = false;
+        short vlan = 1;
+        int index = -1;
+        int stripindex = -1;
+        if (!match.getWildcardObj().isWildcarded(Wildcards.Flag.DL_VLAN)) {
+            match_vlan = true;
+        }
+        System.out.println("Inside PrependRewriteActions .. Approved Actions so far :"+ approvedActions.toString());
+        for (int i=0;i< approvedActions.size();i++) {
+            OFAction action = actions.get(i);
+            if (action.getType() == OFActionType.SET_VLAN_ID) {
+                OVXActionVirtualLanIdentifier existingVlan = (OVXActionVirtualLanIdentifier) action;
+                vlan = existingVlan.getVirtualLanIdentifier();
+                index = i;
+                System.out.println("Found Vlan action at index "+ i+ " with vlan tag "+ vlan);
+                break;
+            }
+            if (action.getType() == OFActionType.STRIP_VLAN) {
+                vlan = 1;
+                stripindex = i;
+                System.out.println("Found Strip Vlan at index "+ i);
+            }
+        }
+        if (index > -1) {
+            approvedActions.remove(index);
+        }
+        if (stripindex > -1) {
+            approvedActions.remove(stripindex);
+        }
+        ovlan.setVirtualLanIdentifier(TenantMapper.getPhysicalVlan(tenantId, vlan));
+
+        approvedActions.add(0, ovlan);
+
+        System.out.println("Pravein: Rewriting Action.. to set vlan ID "+ vlan+" to "+ TenantMapper.getPhysicalVlan(tenantId, vlan));
+
     }
 
-    public static List<OFAction> prependUnRewriteActions(final OFMatch match) {
+
+    public static void prependUnRewriteActions(final OFMatch match, List<OFAction> approvedActions) {
         final List<OFAction> actions = new LinkedList<OFAction>();
-//        System.out.println("Pravein: UnRewriting Action.. to set n/w source to "+
-//                match.getNetworkSource()+
-//                " and n/w dest to "+ match.getNetworkDestination());
-        System.out.println("Ignoring IP Translation..");
-//        if (!match.getWildcardObj().isWildcarded(Flag.NW_SRC)) {
-//            final OVXActionNetworkLayerSource srcAct = new OVXActionNetworkLayerSource();
-//            srcAct.setNetworkAddress(match.getNetworkSource());
-//            actions.add(srcAct);
-//        }
-//        if (!match.getWildcardObj().isWildcarded(Flag.NW_DST)) {
-//            final OVXActionNetworkLayerDestination dstAct = new OVXActionNetworkLayerDestination();
-//            dstAct.setNetworkAddress(match.getNetworkDestination());
-//            actions.add(dstAct);
-//        }
-        return actions;
+        short vlan = 1;
+        boolean match_vlan = false;
+        int index = -1;
+        int stripindex = -1;
+        if (!match.getWildcardObj().isWildcarded(Wildcards.Flag.DL_VLAN)) {
+
+            vlan = match.getDataLayerVirtualLan();
+            System.out.println("Match : "+ match.toString());
+            System.out.println("VLAN : "+  vlan);
+
+            if (vlan == Ethernet.VLAN_UNTAGGED ) {
+                /* Untagged. */
+                /* Nothing */
+            } else {
+                match_vlan = true;
+            }
+        }
+
+        System.out.println("Inside PrependUnRewriteActions .. Approved Actions so far :"+ approvedActions.toString());
+        for (int i=0;i< approvedActions.size();i++) {
+            OFAction action = approvedActions.get(i);
+            if (action.getType() == OFActionType.SET_VLAN_ID) {
+                OVXActionVirtualLanIdentifier existingVlan = (OVXActionVirtualLanIdentifier) action;
+                vlan = existingVlan.getVirtualLanIdentifier();
+                index = i;
+                System.out.println("Found Vlan action at index "+ i+ " with vlan tag "+ vlan);
+                break;
+            }
+            if (action.getType() == OFActionType.STRIP_VLAN) {
+                vlan = 1;
+                stripindex = i;
+                System.out.println("Found Strip Vlan at index "+ i);
+            }
+        }
+
+        if (stripindex > -1) {
+            /* Nothing to do..*/
+            return;
+        } else if (index > -1) {
+            /* Again Nothing to do */
+            return;
+        } else if (match_vlan == true){
+            /* We have a match, and no strip.. so maintain the vlan.. */
+            System.out.println("Match_vlan is true...");
+            //short origVlan = getOrigVlan(vlan);
+            if (vlan != 1) {
+                final OVXActionVirtualLanIdentifier ovlan = new OVXActionVirtualLanIdentifier();
+                ovlan.setVirtualLanIdentifier(vlan);
+                approvedActions.add(0, ovlan);
+                System.out.println("Found a match of VLAN ID with no "+ vlan + " Hence, Changing to that vlan");
+            } else {
+                System.out.println("Found a match with VLAN ID of "+ 1 + "Stripping Vlan");
+                final OVXActionStripVirtualLan vlanstrip = new OVXActionStripVirtualLan();
+                approvedActions.add(0, vlanstrip);
+            }
+        } else {
+            System.out.println("UnRewriting Action.. Stripping vlan");
+            final OVXActionStripVirtualLan vlanstrip = new   OVXActionStripVirtualLan();
+            approvedActions.add(0, vlanstrip);
+        }
+
     }
+
 }

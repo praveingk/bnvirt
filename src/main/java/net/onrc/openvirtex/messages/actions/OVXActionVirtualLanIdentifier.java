@@ -17,6 +17,7 @@ package net.onrc.openvirtex.messages.actions;
 
 import java.util.List;
 
+import net.onrc.openvirtex.elements.Mapper.TenantMapper;
 import net.onrc.openvirtex.elements.datapath.OVXSwitch;
 import net.onrc.openvirtex.exceptions.ActionVirtualizationDenied;
 import net.onrc.openvirtex.messages.OVXPacketOut;
@@ -32,6 +33,8 @@ public class OVXActionVirtualLanIdentifier extends OFActionVirtualLanIdentifier
     public void virtualize(final OVXSwitch sw,
             final List<OFAction> approvedActions, final OVXMatch match)
             throws ActionVirtualizationDenied {
+        //System.out.println("Inside VLAN virtualize ... Converting VLAN ID #"+ this.virtualLanIdentifier +  " to VLAN ID #"+ TenantMapper.getPhysicalVlan(sw.getTenantId(), this.virtualLanIdentifier));
+        //this.virtualLanIdentifier = TenantMapper.getPhysicalVlan(sw.getTenantId(), this.virtualLanIdentifier);
         approvedActions.add(this);
     }
 

@@ -29,6 +29,7 @@ import java.util.TreeMap;
 import net.onrc.openvirtex.api.service.handlers.TenantHandler;
 import net.onrc.openvirtex.db.DBManager;
 import net.onrc.openvirtex.elements.Mappable;
+import net.onrc.openvirtex.elements.Mapper.TenantMapper;
 import net.onrc.openvirtex.elements.OVXMap;
 import net.onrc.openvirtex.elements.address.IPMapper;
 import net.onrc.openvirtex.elements.datapath.OVXFlowTable;
@@ -362,7 +363,7 @@ public class OVXLink extends Link<OVXPort, OVXSwitch> {
         fm.setCookie(cookie << 32);
 
         if (fm.getMatch().getDataLayerType() == Ethernet.TYPE_IPV4) {
-            IPMapper.rewriteMatch(this.tenantId, fm.getMatch());
+            TenantMapper.rewriteMatch(this.tenantId, fm.getMatch());
         }
 
         /*

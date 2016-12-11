@@ -32,6 +32,7 @@ public class LoopNetwork {
         System.out.println("Initializing Loop ports..");
         int totalLoopPorts = 11;
         short port = 25;
+
         for (short i=0;i< totalLoopPorts;i++) {
             DPIDandPort srcDP = new DPIDandPort(new Long(0x000170106f954f00L), (short) (port));
             port++;

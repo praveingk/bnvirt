@@ -510,7 +510,6 @@ public abstract class OVXSwitch extends Switch<OVXPort> implements Persistable {
      */
     @Override
     public void sendMsg(final OFMessage msg, final OVXSendMsg from) {
-        System.out.println("sendMsg : Sending the message to the switch ");
         XidPair<Channel> pair = channelMux.untranslate(msg.getXid());
         Channel c = null;
         if (pair != null) {

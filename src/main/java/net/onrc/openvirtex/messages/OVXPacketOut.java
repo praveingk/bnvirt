@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
+import net.onrc.openvirtex.elements.Mapper.TenantMapper;
 import net.onrc.openvirtex.elements.address.IPMapper;
 import net.onrc.openvirtex.elements.datapath.OVXSwitch;
 import net.onrc.openvirtex.elements.port.OVXPort;
@@ -25,6 +26,7 @@ import net.onrc.openvirtex.exceptions.ActionVirtualizationDenied;
 import net.onrc.openvirtex.exceptions.DroppedMessageException;
 import net.onrc.openvirtex.messages.actions.OVXActionNetworkLayerDestination;
 import net.onrc.openvirtex.messages.actions.OVXActionNetworkLayerSource;
+import net.onrc.openvirtex.messages.actions.OVXActionVirtualLanIdentifier;
 import net.onrc.openvirtex.messages.actions.VirtualizableAction;
 import net.onrc.openvirtex.protocol.OVXMatch;
 
@@ -169,6 +171,13 @@ public class OVXPacketOut extends OFPacketOut implements Devirtualizable {
     }
 
     private void prependRewriteActions(final OVXSwitch sw) {
+//        final OVXActionVirtualLanIdentifier ovlan = new OVXActionVirtualLanIdentifier();
+//        short vlan = 1;
+//        ovlan.setVirtualLanIdentifier(TenantMapper.getPhysicalVlan(sw.getTenantId(), vlan));
+//
+//        this.approvedActions.add(ovlan);
+//        System.out.println("Pravein: Rewriting Action.. to set vlan to "+ TenantMapper.getPhysicalVlan(sw.getTenantId(), vlan));
+//
 //        if (!this.match.getWildcardObj().isWildcarded(Flag.NW_SRC)) {
 //            final OVXActionNetworkLayerSource srcAct = new OVXActionNetworkLayerSource();
 //            srcAct.setNetworkAddress(IPMapper.getPhysicalIp(sw.getTenantId(),

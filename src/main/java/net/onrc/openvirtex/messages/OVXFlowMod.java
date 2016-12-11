@@ -20,6 +20,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import net.onrc.openvirtex.elements.Mapper.TenantMapper;
 import net.onrc.openvirtex.elements.address.IPMapper;
 import net.onrc.openvirtex.elements.datapath.FlowTable;
 import net.onrc.openvirtex.elements.datapath.OVXFlowTable;
@@ -34,6 +35,7 @@ import net.onrc.openvirtex.exceptions.NetworkMappingException;
 import net.onrc.openvirtex.exceptions.UnknownActionException;
 import net.onrc.openvirtex.messages.actions.OVXActionNetworkLayerDestination;
 import net.onrc.openvirtex.messages.actions.OVXActionNetworkLayerSource;
+import net.onrc.openvirtex.messages.actions.OVXActionVirtualLanIdentifier;
 import net.onrc.openvirtex.messages.actions.VirtualizableAction;
 import net.onrc.openvirtex.packet.Ethernet;
 import net.onrc.openvirtex.protocol.OVXMatch;
@@ -44,8 +46,10 @@ import org.apache.logging.log4j.Logger;
 import org.openflow.protocol.OFError.OFFlowModFailedCode;
 import org.openflow.protocol.OFFlowMod;
 import org.openflow.protocol.OFMatch;
+import org.openflow.protocol.Wildcards;
 import org.openflow.protocol.Wildcards.Flag;
 import org.openflow.protocol.action.OFAction;
+import org.openflow.protocol.action.OFActionType;
 
 public class OVXFlowMod extends OFFlowMod implements Devirtualizable {
 
@@ -53,8 +57,7 @@ public class OVXFlowMod extends OFFlowMod implements Devirtualizable {
     private final Logger log = LogManager.getLogger(OVXFlowMod.class.getName());
 
     private OVXSwitch sw = null;
-    private final List<OFAction> approvedActions = new LinkedList<OFAction>();
-
+    private List<OFAction> approvedActions = new LinkedList<OFAction>();
     private long ovxCookie = -1;
 
     @Override
@@ -73,6 +76,50 @@ public class OVXFlowMod extends OFFlowMod implements Devirtualizable {
         }
         final short inport = this.getMatch().getInputPort();
 
+        /* Below logic, are some throttling to make sure flowmod contains some basic Match criteria
+         * We basically want to avoid situations where flowmod with "no match criteria" or "just an in_port" may arrive
+         *
+         * In such conditions, its best to deny the addition of the flow.
+         */
+        if (isMatchViolates()) {
+            System.out.println("FlowMod Violates Isolation!!");
+            
+            return;
+        }
+
+
+        /* Below Logic surfaces when a flowadd appears without an in_port.
+         * In such cases, we enumerate the available ports on the ovxswitch, and
+         * create a flow with each in_port.
+         *
+         * We need to have in_port to keep track of all mac translation, and to maintain isolation.
+         */
+        OVXPort ovxInPort = sw.getPort(inport);
+        OFMatch origMatch = this.match.clone();
+        List<OFAction> origActions = new LinkedList<>();
+        for (final OFAction act : this.getActions()) {
+            origActions.add(act);
+        }
+        if (ovxInPort == null) {
+            System.out.println("OVXFlowMod : No inport Specificied..Enumerating all..");
+            for (short iport : sw.getPorts().keySet()) {
+                System.out.println("Initiating Devirtualization with inport : "+iport);
+                OVXFlowMod myNewFlow = this.clone();
+                OFMatch myMatch  = origMatch.clone();
+                myMatch.setInputPort(iport);
+                int wcard = myMatch.getWildcards()
+                        & (~OFMatch.OFPFW_IN_PORT);
+                myMatch.setWildcards(wcard);
+                myNewFlow.setMatch(myMatch);
+                myNewFlow.setActions(origActions);
+                approvedActions = new LinkedList<OFAction>();
+                myNewFlow.devirtualize(sw);
+                System.out.println("----------------------------------");
+            }
+            return;
+        }
+
+        //System.out.println("Devirtualizing inport = "+ inport);
         /* let flow table process FlowMod, generate cookie as needed */
         boolean pflag = ft.handleFlowMods(this.clone());
 
@@ -81,11 +128,15 @@ public class OVXFlowMod extends OFFlowMod implements Devirtualizable {
         ovxCookie = ((OVXFlowTable) ft).getCookie(this, false);
         ovxMatch.setCookie(ovxCookie);
         this.setCookie(ovxMatch.getCookie());
-
+        System.out.println("Match : "+ovxMatch.toString() +" inport = "+ovxMatch.getInputPort());
         for (final OFAction act : this.getActions()) {
             try {
+
                 ((VirtualizableAction) act).virtualize(sw,
                         this.approvedActions, ovxMatch);
+                    //System.out.println("New Match : "+ ovxMatch.toString() + " cookie = "+ovxCookie);
+                    //System.out.println("Finished virt.. action : "+this.approvedActions.toString());
+
             } catch (final ActionVirtualizationDenied e) {
                 this.log.warn("Action {} could not be virtualized; error: {}",
                         act, e.getMessage());
@@ -100,10 +151,10 @@ public class OVXFlowMod extends OFFlowMod implements Devirtualizable {
             }
         }
 
-        final OVXPort ovxInPort = sw.getPort(inport);
         this.setBufferId(bufferId);
 
         if (ovxInPort == null) {
+            System.out.println("Pravein: ovxinport is NULL!!, Enumerating all inports..");
             if (this.match.getWildcardObj().isWildcarded(Flag.IN_PORT)) {
                 /* expand match to all ports */
                 for (OVXPort iport : sw.getPorts().values()) {
@@ -125,6 +176,30 @@ public class OVXFlowMod extends OFFlowMod implements Devirtualizable {
         }
     }
 
+    private boolean isMatchViolates() {
+        int wildcards = match.getWildcards();
+        System.out.println("Wildcard match : "+ Integer.toBinaryString(wildcards));
+        short vlan = 1;
+        if ((wildcards & OFMatch.OFPFW_IN_PORT) == 1) {
+            System.out.println("No Inport..");
+        }
+        if (!match.getWildcardObj().isWildcarded(Wildcards.Flag.DL_VLAN)) {
+            vlan  = match.getDataLayerVirtualLan();
+        }
+        if (vlan > 2000) {
+            System.out.println("Use of the VLAN prohibited.");
+            return true;
+        }
+//        if ((wildcards & OFMatch.OFPFW_DL_SRC) == OFMatch.OFPFW_DL_SRC && (wildcards & OFMatch.OFPFW_DL_DST) == OFMatch.OFPFW_DL_DST) {
+//            System.out.println("No Mac src/dest..");
+//            if ((wildcards & OFMatch.OFPFW_NW_SRC_ALL) == OFMatch.OFPFW_NW_SRC_ALL && (wildcards & OFMatch.OFPFW_NW_DST_ALL) == OFMatch.OFPFW_NW_DST_ALL) {
+//                System.out.println("No ipsrc/dest too.. This can't be good..");
+//                return true;
+//            }
+//        }
+        return false;
+    }
+
     private void prepAndSendSouth(OVXPort inPort, boolean pflag) {
         if (!inPort.isActive()) {
             log.warn("Virtual network {}: port {} on switch {} is down.",
@@ -138,7 +213,8 @@ public class OVXFlowMod extends OFFlowMod implements Devirtualizable {
             if (inPort.isEdge()) {
                 this.prependRewriteActions();
             } else {
-                IPMapper.rewriteMatch(sw.getTenantId(), this.match);
+                TenantMapper.rewriteMatch(sw.getTenantId(), this.match);
+                System.out.println(" New Match after rewriting VLAN  : "+ this.match.toString());
                 // TODO: Verify why we have two send points... and if this is
                 // the right place for the match rewriting
                 if (inPort != null
@@ -199,6 +275,43 @@ public class OVXFlowMod extends OFFlowMod implements Devirtualizable {
     }
 
     private void prependRewriteActions() {
+
+        final OVXActionVirtualLanIdentifier ovlan = new OVXActionVirtualLanIdentifier();
+        boolean match_vlan = false;
+        short vlan = 1;
+        int index = -1;
+        int stripindex = -1;
+        if (!match.getWildcardObj().isWildcarded(Wildcards.Flag.DL_VLAN)) {
+            match_vlan = true;
+        }
+        System.out.println("Inside PrependRewriteActions .. Approved Actions so far :"+ approvedActions.toString());
+        for (int i=0;i<this.approvedActions.size();i++) {
+            OFAction action = approvedActions.get(i);
+            if (action.getType() == OFActionType.SET_VLAN_ID) {
+                OVXActionVirtualLanIdentifier existingVlan = (OVXActionVirtualLanIdentifier) action;
+                vlan = existingVlan.getVirtualLanIdentifier();
+                index = i;
+                System.out.println("Found Vlan action at index "+ i+ " with vlan tag "+ vlan);
+                break;
+            }
+            if (action.getType() == OFActionType.STRIP_VLAN) {
+                vlan = 1;
+                stripindex = i;
+                System.out.println("Found Strip Vlan at index "+ i);
+            }
+        }
+        if (index > -1) {
+            approvedActions.remove(index);
+        }
+        if (stripindex > -1) {
+            approvedActions.remove(stripindex);
+        }
+        ovlan.setVirtualLanIdentifier(TenantMapper.getPhysicalVlan(sw.getTenantId(), vlan));
+
+        this.approvedActions.add(0,ovlan);
+
+        System.out.println("Pravein: Rewriting Action.. to set vlan ID "+ vlan+" to "+ TenantMapper.getPhysicalVlan(sw.getTenantId(), vlan));
+
 //
 //        if (!this.match.getWildcardObj().isWildcarded(Flag.NW_SRC)) {
 //            final OVXActionNetworkLayerSource srcAct = new OVXActionNetworkLayerSource();
