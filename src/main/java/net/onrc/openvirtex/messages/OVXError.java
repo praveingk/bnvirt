@@ -38,7 +38,10 @@ public class OVXError extends OFError implements Virtualizable, Devirtualizable 
          * TODO: For now, just report the error. In the future parse them and
          * forward to controller if need be.
          */
-        log.error(getErrorString(this));
+        String error;
+        error = getErrorString(this);
+        if (error != null)
+            log.error(getErrorString(this));
 
     }
 
