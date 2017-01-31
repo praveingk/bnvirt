@@ -33,10 +33,7 @@ import net.onrc.openvirtex.exceptions.DroppedMessageException;
 import net.onrc.openvirtex.exceptions.IndexOutOfBoundException;
 import net.onrc.openvirtex.exceptions.NetworkMappingException;
 import net.onrc.openvirtex.exceptions.UnknownActionException;
-import net.onrc.openvirtex.messages.actions.OVXActionNetworkLayerDestination;
-import net.onrc.openvirtex.messages.actions.OVXActionNetworkLayerSource;
-import net.onrc.openvirtex.messages.actions.OVXActionVirtualLanIdentifier;
-import net.onrc.openvirtex.messages.actions.VirtualizableAction;
+import net.onrc.openvirtex.messages.actions.*;
 import net.onrc.openvirtex.packet.Ethernet;
 import net.onrc.openvirtex.protocol.OVXMatch;
 import net.onrc.openvirtex.util.OVXUtil;
@@ -128,7 +125,7 @@ public class OVXFlowMod extends OFFlowMod implements Devirtualizable {
         ovxCookie = ((OVXFlowTable) ft).getCookie(this, false);
         ovxMatch.setCookie(ovxCookie);
         this.setCookie(ovxMatch.getCookie());
-        System.out.println("Match : "+ovxMatch.toString() +" inport = "+ovxMatch.getInputPort());
+        System.out.println("FlodMod : Match : "+ovxMatch.toString() +" inport = "+ovxMatch.getInputPort());
         for (final OFAction act : this.getActions()) {
             try {
 
@@ -214,7 +211,7 @@ public class OVXFlowMod extends OFFlowMod implements Devirtualizable {
                 this.prependRewriteActions();
             } else {
                 TenantMapper.rewriteMatch(sw.getTenantId(), this.match);
-                System.out.println(" New Match after rewriting VLAN  : "+ this.match.toString());
+                //System.out.println(" New Match after rewriting VLAN  : "+ this.match.toString());
                 // TODO: Verify why we have two send points... and if this is
                 // the right place for the match rewriting
                 if (inPort != null
@@ -276,41 +273,52 @@ public class OVXFlowMod extends OFFlowMod implements Devirtualizable {
 
     private void prependRewriteActions() {
 
-        final OVXActionVirtualLanIdentifier ovlan = new OVXActionVirtualLanIdentifier();
-        boolean match_vlan = false;
-        short vlan = 1;
-        int index = -1;
-        int stripindex = -1;
-        if (!match.getWildcardObj().isWildcarded(Wildcards.Flag.DL_VLAN)) {
-            match_vlan = true;
-        }
-        System.out.println("Inside PrependRewriteActions .. Approved Actions so far :"+ approvedActions.toString());
-        for (int i=0;i<this.approvedActions.size();i++) {
-            OFAction action = approvedActions.get(i);
-            if (action.getType() == OFActionType.SET_VLAN_ID) {
-                OVXActionVirtualLanIdentifier existingVlan = (OVXActionVirtualLanIdentifier) action;
-                vlan = existingVlan.getVirtualLanIdentifier();
-                index = i;
-                System.out.println("Found Vlan action at index "+ i+ " with vlan tag "+ vlan);
-                break;
-            }
-            if (action.getType() == OFActionType.STRIP_VLAN) {
-                vlan = 1;
-                stripindex = i;
-                System.out.println("Found Strip Vlan at index "+ i);
-            }
-        }
-        if (index > -1) {
-            approvedActions.remove(index);
-        }
-        if (stripindex > -1) {
-            approvedActions.remove(stripindex);
-        }
-        ovlan.setVirtualLanIdentifier(TenantMapper.getPhysicalVlan(sw.getTenantId(), vlan));
-
-        this.approvedActions.add(0,ovlan);
-
-        System.out.println("Pravein: Rewriting Action.. to set vlan ID "+ vlan+" to "+ TenantMapper.getPhysicalVlan(sw.getTenantId(), vlan));
+//        byte tos  = sw.getTenantId().byteValue();
+//        final OVXActionNetworkTypeOfService ovtos = new OVXActionNetworkTypeOfService();
+////        if (!match.getWildcardObj().isWildcarded(Wildcards.Flag.DL_VLAN)) {
+////            vlan = match.getDataLayerVirtualLan();
+////        }
+//        System.out.println("Pravein: Rewriting Action.. to set to tos " + tos);
+////
+//        ovtos.setNetworkTypeOfService(tos);
+////
+//        this.approvedActions.add(0, ovtos);
+//        System.out.println(" Added TOS Bit. approved action = "+ this.approvedActions.toString());
+//        final OVXActionVirtualLanIdentifier ovlan = new OVXActionVirtualLanIdentifier();
+//        boolean match_vlan = false;
+//        short vlan = 1;
+//        int index = -1;
+//        int stripindex = -1;
+//        if (!match.getWildcardObj().isWildcarded(Wildcards.Flag.DL_VLAN)) {
+//            match_vlan = true;
+//        }
+//        System.out.println("Inside PrependRewriteActions .. Approved Actions so far :"+ approvedActions.toString());
+//        for (int i=0;i<this.approvedActions.size();i++) {
+//            OFAction action = approvedActions.get(i);
+//            if (action.getType() == OFActionType.SET_VLAN_ID) {
+//                OVXActionVirtualLanIdentifier existingVlan = (OVXActionVirtualLanIdentifier) action;
+//                vlan = existingVlan.getVirtualLanIdentifier();
+//                index = i;
+//                System.out.println("Found Vlan action at index "+ i+ " with vlan tag "+ vlan);
+//                break;
+//            }
+//            if (action.getType() == OFActionType.STRIP_VLAN) {
+//                vlan = 1;
+//                stripindex = i;
+//                System.out.println("Found Strip Vlan at index "+ i);
+//            }
+//        }
+//        if (index > -1) {
+//            approvedActions.remove(index);
+//        }
+//        if (stripindex > -1) {
+//            approvedActions.remove(stripindex);
+//        }
+//        ovlan.setVirtualLanIdentifier(TenantMapper.getPhysicalVlan(sw.getTenantId(), vlan));
+//
+//        this.approvedActions.add(0,ovlan);
+//
+//        System.out.println("Pravein: Rewriting Action.. to set vlan ID "+ vlan+" to "+ TenantMapper.getPhysicalVlan(sw.getTenantId(), vlan));
 
 //
 //        if (!this.match.getWildcardObj().isWildcarded(Flag.NW_SRC)) {
