@@ -60,6 +60,8 @@ VirtualizableAction {
         System.out.println("Pravein: ovxMatch ="+ match.toString());
         final OVXPort inPort = sw.getPort(match.getInputPort());
 
+
+
         System.out.println("Pravein: Input Port : "+inPort.getPhysicalPortNumber() +" Port used : "+this.getPort());
         // TODO: handle TABLE output port here
 
@@ -71,7 +73,7 @@ VirtualizableAction {
         } catch (NetworkMappingException e) {
             log.warn("{}: skipping processing of OFAction", e);
             System.out.println("Networking mapping error!!!-------------------------------------------");
-            return;
+            throw new DroppedMessageException();
         }
 
         if (match.isFlowMod()) {

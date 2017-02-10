@@ -76,7 +76,7 @@ public abstract class OVXSwitch extends Switch<OVXPort> implements Persistable {
      * Datapath description string.
      * TODO: should this be made specific per type of virtual switch?
      */
-    public static final String DPDESCSTRING = "NCL Switch";
+    public static final String DPDESCSTRING = "NCL-Switch";
     protected static int supportedActions = 0xFFF;
     protected static int bufferDimension = 4096;
     protected Integer tenantId = 0;
