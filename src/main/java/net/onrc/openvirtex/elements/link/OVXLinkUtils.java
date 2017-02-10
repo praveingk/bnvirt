@@ -96,6 +96,8 @@ public class OVXLinkUtils {
         final MACAddress mac = MACAddress
                 .valueOf((srcMac.toLong() & 0xFFFFFF) << 24 | dstMac.toLong()
                         & 0xFFFFFF);
+        int vmac = (int)mac.toLong()>>48;
+        System.out.println("MAC: "+ vmac +" - "+ vNets);
         this.tenantId = (int) (mac.toLong() >> 48 - vNets);
         final BitSet bmask = new BitSet((48 - vNets) / 2);
         for (int i = bmask.nextClearBit(0); i < (48 - vNets) / 2; i = bmask
@@ -252,6 +254,7 @@ public class OVXLinkUtils {
         if (linkField == OVXLinkField.MAC_ADDRESS) {
             match.setDataLayerSource(this.getSrcMac().toBytes());
             match.setDataLayerDestination(this.getDstMac().toBytes());
+
         } else if (linkField == OVXLinkField.VLAN) {
             match.setDataLayerVirtualLan(this.getVlan());
         }

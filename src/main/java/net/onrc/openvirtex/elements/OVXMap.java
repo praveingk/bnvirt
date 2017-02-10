@@ -458,11 +458,15 @@ public final class OVXMap implements Mappable {
             final Integer tenantId) throws SwitchMappingException {
         final ConcurrentHashMap<Integer, OVXSwitch> sws = this.physicalSwitchMap
                 .get(physicalSwitch);
+        System.out.println("Getting virtual switch for "+ physicalSwitch.toString()  +  " and tenantid : "+ tenantId);
         if (sws == null) {
+            System.out.println("sws is null");
             throw new SwitchMappingException(physicalSwitch, OVXSwitch.class);
         }
         OVXSwitch vsw = sws.get(tenantId);
         if (vsw == null) {
+            System.out.println("vsw is null.. tenantID = "+ tenantId );
+            System.out.println(sws.toString());
             throw new SwitchMappingException(tenantId, OVXSwitch.class);
         }
         return vsw;

@@ -18,14 +18,13 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
+import net.onrc.openvirtex.elements.Mapper.TenantMapper;
 import net.onrc.openvirtex.elements.address.IPMapper;
 import net.onrc.openvirtex.elements.datapath.OVXSwitch;
 import net.onrc.openvirtex.elements.port.OVXPort;
 import net.onrc.openvirtex.exceptions.ActionVirtualizationDenied;
 import net.onrc.openvirtex.exceptions.DroppedMessageException;
-import net.onrc.openvirtex.messages.actions.OVXActionNetworkLayerDestination;
-import net.onrc.openvirtex.messages.actions.OVXActionNetworkLayerSource;
-import net.onrc.openvirtex.messages.actions.VirtualizableAction;
+import net.onrc.openvirtex.messages.actions.*;
 import net.onrc.openvirtex.protocol.OVXMatch;
 
 import org.apache.logging.log4j.LogManager;
@@ -55,7 +54,7 @@ public class OVXPacketOut extends OFPacketOut implements Devirtualizable {
         this.inport = inport;
         OVXMatch ovxMatch = null;
 
-        System.out.println("Inside OVXPacketOut : inPort(phys)="+ inport.getPhysicalPortNumber());
+        //System.out.println("Inside OVXPacketOut : inPort(phys)="+ inport.getPhysicalPortNumber());
 
         if (this.getBufferId() == OVXPacketOut.BUFFER_ID_NONE) {
             if (this.getPacketData().length <= 14) {
@@ -89,18 +88,18 @@ public class OVXPacketOut extends OFPacketOut implements Devirtualizable {
             }
         }
 
-        System.out.println("OutputList : "+this.getActions().toString());
+        //System.out.println("OutputList : "+this.getActions().toString());
 
         for (final OFAction act : this.getActions()) {
             try {
-                System.out.println("Actions : "+ act.toString());
+                //System.out.println("Actions : "+ act.toString());
                 if (act.getType().getTypeValue() == 0) {
                     OFActionOutput outAction = (OFActionOutput)act;
-                    System.out.println("Output : "+outAction.getPort());
+                    //System.out.println("Output : "+outAction.getPort());
                 }
                 ((VirtualizableAction) act).virtualize(sw,
                         this.approvedActions, ovxMatch);
-                System.out.println("Finished virtualization..");
+                //System.out.println("Finished virtualization..");
             } catch (final ActionVirtualizationDenied e) {
                 this.log.warn("Action {} could not be virtualized; error: {}",
                         act, e.getMessage());
@@ -114,7 +113,7 @@ public class OVXPacketOut extends OFPacketOut implements Devirtualizable {
                 return;
             }
         }
-        System.out.println("Got Out of Loop of filling actions for sw : "+ sw.getName());
+        //System.out.println("Got Out of Loop of filling actions for sw : "+ sw.getName());
 
         if (U16.f(this.getInPort()) < U16.f(OFPort.OFPP_MAX.getValue())) {
             this.setInPort(inport.getPhysicalPortNumber());
@@ -135,9 +134,9 @@ public class OVXPacketOut extends OFPacketOut implements Devirtualizable {
             OVXMessageUtil.translateXid(this, inport);
         }
         this.log.debug("Sending packet-out to sw {}: {}", sw.getName(), this);
-        System.out.println("Sending packet-out to sw {"+sw.getName()+"}+ {"+ this+"}" + "Inport = "+inport.getPhysicalPortNumber());
+        //System.out.println("Sending packet-out to sw {"+sw.getName()+"}+ {"+ this+"}" + "Inport = "+inport.getPhysicalPortNumber());
         sw.sendSouth(this, inport);
-        System.out.println("Finished sendSouth, returning call");
+        //System.out.println("Finished sendSouth, returning call");
     }
 
     public void sendPacketsOut(final OVXSwitch sw) {
@@ -169,6 +168,26 @@ public class OVXPacketOut extends OFPacketOut implements Devirtualizable {
     }
 
     private void prependRewriteActions(final OVXSwitch sw) {
+//
+//        byte tos  = sw.getTenantId().byteValue();
+//        final OVXActionNetworkTypeOfService ovtos = new OVXActionNetworkTypeOfService();
+////        if (!match.getWildcardObj().isWildcarded(Wildcards.Flag.DL_VLAN)) {
+////            vlan = match.getDataLayerVirtualLan();
+////        }
+//        System.out.println("Pravein: Rewriting Action.. to set tos to " + sw.getTenantId());
+////
+//        ovtos.setNetworkTypeOfService(tos);
+//
+////
+//        approvedActions.add(0, ovtos);
+//        System.out.println("Actions : "+ approvedActions.toString());
+//        final OVXActionVirtualLanIdentifier ovlan = new OVXActionVirtualLanIdentifier();
+//        short vlan = 1;
+//        ovlan.setVirtualLanIdentifier(TenantMapper.getPhysicalVlan(sw.getTenantId(), vlan));
+//
+//        this.approvedActions.add(ovlan);
+//        System.out.println("Pravein: Rewriting Action.. to set vlan to "+ TenantMapper.getPhysicalVlan(sw.getTenantId(), vlan));
+//
 //        if (!this.match.getWildcardObj().isWildcarded(Flag.NW_SRC)) {
 //            final OVXActionNetworkLayerSource srcAct = new OVXActionNetworkLayerSource();
 //            srcAct.setNetworkAddress(IPMapper.getPhysicalIp(sw.getTenantId(),

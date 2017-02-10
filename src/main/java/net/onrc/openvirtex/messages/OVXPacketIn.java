@@ -64,7 +64,7 @@ public class OVXPacketIn extends OFPacketIn implements Virtualizable {
          */
 
         short inport = this.getInPort();
-        System.out.println("Pravein: PacketIn from "+inport);
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Pravein: PacketIn from "+inport + " sw = "+ sw.getSwitchName());
         port = sw.getPort(inport);
         Mappable map = sw.getMap();
 
@@ -91,7 +91,7 @@ public class OVXPacketIn extends OFPacketIn implements Virtualizable {
             /*
              * Checks on vSwitch and the virtual port done in swndPkt.
              */
-            //System.out.println("Pravein : Got a Packet in from a port of valid tenant!");
+            System.out.println("Pravein : Got a Packet in from a port of valid tenant!");
             vSwitch = this.fetchOVXSwitch(sw, port.getPortNumber(), vSwitch, map);
             //System.out.println("Pravien :Switch mapping :"+Long.toHexString(sw.getSwitchId())+":"+port.getPortNumber() +" Maps to "+ Long.toHexString(vSwitch.getSwitchId()));
             this.ovxPort = this.port.getOVXPort(this.tenantId, 0);
@@ -117,9 +117,12 @@ public class OVXPacketIn extends OFPacketIn implements Virtualizable {
          * and possibly the mac address fields if these packets are at the
          * egress point of a virtual link.
          */
-
+        System.out.println("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ NOT Edge port...");
+        System.out.println("Match : "+ match.toString());
         if (match.getDataLayerType() == Ethernet.TYPE_IPV4
                 || match.getDataLayerType() == Ethernet.TYPE_ARP) {
+            System.out.println("Type is IPV4/ARP");
+            System.out.println("1. tenantid = "+ this.tenantId);
             PhysicalIPAddress srcIP = new PhysicalIPAddress(
                     match.getNetworkSource());
             PhysicalIPAddress dstIP = new PhysicalIPAddress(
@@ -131,10 +134,15 @@ public class OVXPacketIn extends OFPacketIn implements Virtualizable {
 
             OVXLinkUtils lUtils = new OVXLinkUtils(eth.getSourceMAC(),
                     eth.getDestinationMAC());
+            System.out.println("LUtils : "+lUtils.toString());
+            System.out.println("2. tenantid = "+ this.tenantId);
+
             // rewrite the OFMatch with the values of the link
             if (lUtils.isValid()) {
                 OVXPort srcPort = port.getOVXPort(lUtils.getTenantId(),
                         lUtils.getLinkId());
+                System.out.println("Tenant id : "+ lUtils.getTenantId());
+                this.tenantId = lUtils.getTenantId();
                 if (srcPort == null) {
                     this.log.error(
                             "Virtual Src Port Unknown: {}, port {} with this match {}; dropping packet",
@@ -148,12 +156,16 @@ public class OVXPacketIn extends OFPacketIn implements Virtualizable {
                             lUtils.getTenantId()).getNeighborPort(srcPort);
                     System.out.println("Pravein: Packet IN from "+ Long.toHexString(sw.getSwitchId())
                             +",port:"+ srcPort.getPortNumber());
+                    System.out.println("3. tenantid = "+ this.tenantId);
+
                     link = map.getVirtualSwitch(sw,(int) srcPort.getPortNumber(), lUtils.getTenantId())
                             .getMap().getVirtualNetwork(lUtils.getTenantId())
                             .getLink(dstPort, srcPort);
                 } catch (SwitchMappingException | NetworkMappingException e) {
                     return; // same as (link == null)
                 }
+                System.out.println("4. tenantid = "+ this.tenantId);
+
                 this.ovxPort = this.port.getOVXPort(lUtils.getTenantId(),
                         link.getLinkId());
                 OVXLinkField linkField = OpenVirteXController.getInstance()
@@ -172,6 +184,8 @@ public class OVXPacketIn extends OFPacketIn implements Virtualizable {
                         match.setDataLayerSource(eth.getSourceMACAddress())
                                 .setDataLayerDestination(
                                         eth.getDestinationMACAddress());
+                        System.out.println("5. tenantid = "+ this.tenantId);
+
                     } catch (NetworkMappingException e) {
                         log.warn(e);
                     }
@@ -187,6 +201,8 @@ public class OVXPacketIn extends OFPacketIn implements Virtualizable {
                 // ARP packet
                 final ARP arp = (ARP) eth.getPayload();
                 this.tenantId = this.fetchTenantId(match, map, true);
+                System.out.println("6. tenantid = "+ this.tenantId);
+
                 try {
                     //Pravein : Ignore Translation
                     /*if (map.hasVirtualIP(srcIP)) {
@@ -210,6 +226,9 @@ public class OVXPacketIn extends OFPacketIn implements Virtualizable {
                     if (this.tenantId == null) {
                         this.tenantId = dstIP.getTenantId();
                     }
+                    System.out.println("7. tenantid = "+ this.tenantId);
+
+
                 } catch (Exception e) {
                     log.warn("Could not rewrite IP fields : {}", e);
                 }
@@ -221,6 +240,7 @@ public class OVXPacketIn extends OFPacketIn implements Virtualizable {
             }
             this.setPacketData(eth.serialize());
 
+            System.out.println("Towards the end of packet in tenantID = "+ this.tenantId);
             vSwitch = this.fetchOVXSwitch(sw, port.getPortNumber() ,vSwitch, map);
             //System.out.println("Packet "+ this.toString() + " of vSwitch "+ Long.toHexString(vSwitch.getSwitchId()) + " send to "+this.tenantId);
             this.sendPkt(vSwitch, match, sw);
@@ -339,6 +359,7 @@ public class OVXPacketIn extends OFPacketIn implements Virtualizable {
             Mappable map) {
         if (vswitch == null) {
             try {
+                System.out.println("Fetching virtual switch  for tenantID "+ this.tenantId);
                 vswitch = map.getVirtualSwitch(psw, (int) port, this.tenantId);
             } catch (SwitchMappingException e) {
                 log.warn("Cannot fetch non-mapped OVXSwitch: {}", e);

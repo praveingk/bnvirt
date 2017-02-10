@@ -186,6 +186,7 @@ public class OVXFlowTable implements FlowTable {
     private boolean doFlowModAdd(OVXFlowMod fm) {
         if ((fm.getFlags() & OFFlowMod.OFPFF_CHECK_OVERLAP) == OFFlowMod.OFPFF_CHECK_OVERLAP) {
             OVXFlowEntry fe = new OVXFlowEntry();
+
             for (OVXFlowMod fmod : this.flowmodMap.values()) {
                 /*
                  * if not disjoint AND same priority send up OVERLAP error and
@@ -299,6 +300,8 @@ public class OVXFlowTable implements FlowTable {
             }
 
         }
+
+
         Long cookie = this.cookieMap.get(flowmod.hashCode());
         if (cookie == null) {
             cookie = this.getCookie();

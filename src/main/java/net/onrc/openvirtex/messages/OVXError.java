@@ -38,7 +38,10 @@ public class OVXError extends OFError implements Virtualizable, Devirtualizable 
          * TODO: For now, just report the error. In the future parse them and
          * forward to controller if need be.
          */
-        log.error(getErrorString(this));
+        String error;
+        error = getErrorString(this);
+        if (error != null)
+            log.error(getErrorString(this));
 
     }
 
@@ -52,14 +55,14 @@ public class OVXError extends OFError implements Virtualizable, Devirtualizable 
         // TODO: this really should be OFError.toString. Sigh.
         int etint = 0xffff & error.getErrorType();
         if (etint < 0 || etint >= OFErrorType.values().length) {
-            return String.format("Unknown error type %d", etint);
+            return null;//String.format("Unknown error type %d", etint);
         }
         OFErrorType et = OFErrorType.values()[etint];
         switch (et) {
         case OFPET_HELLO_FAILED:
             OFHelloFailedCode hfc = OFHelloFailedCode.values()[0xffff & error
                     .getErrorCode()];
-            return String.format("Error %s %s", et, hfc);
+            return null;//String.format("Error %s %s", et, hfc);
         case OFPET_BAD_REQUEST:
             OFBadRequestCode brc = OFBadRequestCode.values()[0xffff & error
                     .getErrorCode()];

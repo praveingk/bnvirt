@@ -124,7 +124,6 @@ public final class PhysicalNetwork extends
 
     /**
      * Adds port for discovery.
-     *
      * @param port the port
      */
     public synchronized void addPort(final PhysicalPort port) {
@@ -137,6 +136,7 @@ public final class PhysicalNetwork extends
             }
         }
         DBManager.getInstance().addPort(port.toDPIDandPort());
+        System.out.println("Adding Port : "+port.getPortNumber());
     }
 
     /**

@@ -30,6 +30,7 @@ import java.util.Map;
 
 import net.onrc.openvirtex.api.service.handlers.TenantHandler;
 import net.onrc.openvirtex.db.DBManager;
+import net.onrc.openvirtex.elements.Mapper.TenantMapper;
 import net.onrc.openvirtex.elements.OVXMap;
 import net.onrc.openvirtex.elements.Persistable;
 import net.onrc.openvirtex.elements.address.IPMapper;
@@ -327,7 +328,7 @@ Persistable {
          * last FM to rewrite the MACs - generate the route FMs
          */
         if (this.getDstPort().isEdge()) {
-            outActions.addAll(IPMapper.prependUnRewriteActions(fm.getMatch()));
+            TenantMapper.prependUnRewriteActions(fm.getMatch(), outActions);
         } else {
             final OVXLink link = this.getDstPort().getLink().getOutLink();
             Integer linkId = link.getLinkId();
@@ -358,7 +359,7 @@ Persistable {
          * 1) change the fields where the physical ips are stored
          */
         if (fm.getMatch().getDataLayerType() == Ethernet.TYPE_IPV4) {
-            IPMapper.rewriteMatch(this.getSrcPort().getTenantId(),
+            TenantMapper.rewriteMatch(this.getSrcPort().getTenantId(),
                     fm.getMatch());
         }
 
@@ -481,7 +482,7 @@ Persistable {
                 }
                 OVXLinkUtils lUtils = new OVXLinkUtils(this.getTenantId(), link.getLinkId(), flowId);
                 lUtils.rewriteMatch(fm.getMatch());
-                IPMapper.rewriteMatch(this.getTenantId(), fm.getMatch());
+                TenantMapper.rewriteMatch(this.getTenantId(), fm.getMatch());
                 approvedActions.addAll(lUtils.unsetLinkFields(false, false));
             } else {
                 SwitchRoute.log.warn(
@@ -490,8 +491,8 @@ Persistable {
                 return;
             }
         } else {
-            approvedActions.addAll(IPMapper.prependRewriteActions(
-                    this.getTenantId(), fm.getMatch()));
+            TenantMapper.prependRewriteActions(
+                    this.getTenantId(), fm.getMatch(), approvedActions);
         }
 
         fm.getMatch().setInputPort(this.getSrcPort().getPhysicalPortNumber());

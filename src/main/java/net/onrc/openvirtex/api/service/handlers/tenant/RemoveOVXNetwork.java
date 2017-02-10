@@ -20,6 +20,7 @@ import java.util.Map;
 import net.onrc.openvirtex.api.service.handlers.ApiHandler;
 import net.onrc.openvirtex.api.service.handlers.HandlerUtils;
 import net.onrc.openvirtex.api.service.handlers.TenantHandler;
+import net.onrc.openvirtex.elements.Mapper.TenantMapper;
 import net.onrc.openvirtex.elements.OVXMap;
 import net.onrc.openvirtex.elements.network.OVXNetwork;
 import net.onrc.openvirtex.exceptions.InvalidTenantIdException;
@@ -60,6 +61,7 @@ public class RemoveOVXNetwork extends ApiHandler<Map<String, Object>> {
                                 this.cmdName()), 0);
             } else {
                 virtualNetwork.unregister();
+                TenantMapper.clearTenantVlans(tenantId.intValue());
                 this.log.info("Removed virtual network {}", tenantId);
                 resp = new JSONRPC2Response(0);
             }
