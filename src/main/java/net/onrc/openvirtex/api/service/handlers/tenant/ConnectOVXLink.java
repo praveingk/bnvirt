@@ -95,7 +95,6 @@ public class ConnectOVXLink extends ApiHandler<Map<String, Object>> {
 //                myNet.createLink(sPort,dPort);
 //
 //            }
-            System.out.println("Connecting a virtualLink");
             final OVXLink virtualLink = virtualNetwork.connectLink(
                     srcDpid.longValue(), srcPort.shortValue(),
                     dstDpid.longValue(), dstPort.shortValue(), alg,

@@ -17,7 +17,7 @@ package net.onrc.openvirtex.messages.actions;
 
 import java.util.List;
 
-import net.onrc.openvirtex.elements.Mapper.TenantMapper;
+import net.onrc.openvirtex.elements.Mapper.TenantMapperVlan;
 import net.onrc.openvirtex.elements.datapath.OVXSwitch;
 import net.onrc.openvirtex.exceptions.ActionVirtualizationDenied;
 import net.onrc.openvirtex.messages.OVXPacketOut;

@@ -19,7 +19,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import net.onrc.openvirtex.elements.Mapper.TenantMapper;
+import net.onrc.openvirtex.api.Global.GlobalConfig;
+import net.onrc.openvirtex.api.Global.TAG;
+import net.onrc.openvirtex.elements.Mapper.TenantMapperVlan;
+import net.onrc.openvirtex.elements.Mapper.TenantMapperTos;
 import net.onrc.openvirtex.elements.address.IPMapper;
 import net.onrc.openvirtex.elements.datapath.OVXBigSwitch;
 import net.onrc.openvirtex.elements.datapath.OVXSwitch;
@@ -179,7 +182,14 @@ VirtualizableAction {
                             // TODO: this is logically incorrect, i have to do
                             // this because we always add the rewriting actions
                             // in the flowMod. Change it.
-                            TenantMapper.prependUnRewriteActions(match, approvedActions);
+                            //TenantMapper.prependUnRewriteActions(match, approvedActions);
+                            if (GlobalConfig.bnvTagType == TAG.TOS) {
+                                TenantMapperTos.prependUnRewriteActions(fm.getMatch(), approvedActions);
+                            } else if (GlobalConfig.bnvTagType == TAG.VLAN) {
+                                TenantMapperVlan.prependUnRewriteActions(fm.getMatch(), approvedActions);
+                            } else if (GlobalConfig.bnvTagType == TAG.NOTAG){
+                                /* Do Nothing */
+                            }
                         } else {
                             /*
                              * If inPort is edge and outPort is link:
@@ -216,7 +226,14 @@ VirtualizableAction {
                              * - add actions to current FM to restore packet fields
                              * related to the link
                              */
-                            TenantMapper.prependUnRewriteActions(match, approvedActions);
+                            //TenantMapper.prependUnRewriteActions(match, approvedActions);
+                            if (GlobalConfig.bnvTagType == TAG.TOS) {
+                                TenantMapperTos.prependUnRewriteActions(match, approvedActions);
+                            } else if (GlobalConfig.bnvTagType == TAG.VLAN) {
+                                TenantMapperVlan.prependUnRewriteActions(match, approvedActions);
+                            } else if (GlobalConfig.bnvTagType == TAG.NOTAG){
+                                /* Do Nothing */
+                            }
                             // rewrite the OFMatch with the values of the link
                             final OVXPort dstPort = vnet
                                     .getNeighborPort(inPort);
@@ -372,7 +389,14 @@ VirtualizableAction {
                     //System.out.println("---------------------------------------------------------------------------");
                     //System.out.println("Its an edgePort!!");
                     throwException = false;
-                    TenantMapper.prependUnRewriteActions(match, approvedActions);
+                    //TenantMapper.prependUnRewriteActions(match, approvedActions);
+                    if (GlobalConfig.bnvTagType == TAG.TOS) {
+                        TenantMapperTos.prependUnRewriteActions(match, approvedActions);
+                    } else if (GlobalConfig.bnvTagType == TAG.VLAN) {
+                        TenantMapperVlan.prependUnRewriteActions(match, approvedActions);
+                    } else if (GlobalConfig.bnvTagType == TAG.NOTAG){
+                        /* Do Nothing */
+                    }
                     approvedActions.add(new OFActionOutput(outPort
                             .getPhysicalPortNumber()));
                     //System.out.println("Approved Action  : "+ approvedActions.toString() + " will now send the packet to "+ outPort.getPhysicalPortNumber());
@@ -396,7 +420,6 @@ VirtualizableAction {
         final LinkedList<OVXPort> outPortList = new LinkedList<OVXPort>();
         //System.out.println("Filling out Port = "+U16.f(outPort) );
         if (U16.f(outPort) < U16.f(OFPort.OFPP_MAX.getValue())) {
-            System.out.println("single value...");
             if (sw.getPort(outPort) != null && sw.getPort(outPort).isActive()) {
                 outPortList.add(sw.getPort(outPort));
             }

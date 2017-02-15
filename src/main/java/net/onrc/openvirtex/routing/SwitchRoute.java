@@ -28,9 +28,12 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.Map;
 
+import net.onrc.openvirtex.api.Global.GlobalConfig;
+import net.onrc.openvirtex.api.Global.TAG;
 import net.onrc.openvirtex.api.service.handlers.TenantHandler;
 import net.onrc.openvirtex.db.DBManager;
-import net.onrc.openvirtex.elements.Mapper.TenantMapper;
+import net.onrc.openvirtex.elements.Mapper.TenantMapperTos;
+import net.onrc.openvirtex.elements.Mapper.TenantMapperVlan;
 import net.onrc.openvirtex.elements.OVXMap;
 import net.onrc.openvirtex.elements.Persistable;
 import net.onrc.openvirtex.elements.address.IPMapper;
@@ -328,7 +331,14 @@ Persistable {
          * last FM to rewrite the MACs - generate the route FMs
          */
         if (this.getDstPort().isEdge()) {
-            TenantMapper.prependUnRewriteActions(fm.getMatch(), outActions);
+            //TenantMapper.prependUnRewriteActions(fm.getMatch(), outActions);
+            if (GlobalConfig.bnvTagType == TAG.TOS) {
+                TenantMapperTos.prependUnRewriteActions(fm.getMatch(), outActions);
+            } else if (GlobalConfig.bnvTagType == TAG.VLAN) {
+                TenantMapperVlan.prependUnRewriteActions(fm.getMatch(), outActions);
+            } else if (GlobalConfig.bnvTagType == TAG.NOTAG){
+                /* Do Nothing */
+            }
         } else {
             final OVXLink link = this.getDstPort().getLink().getOutLink();
             Integer linkId = link.getLinkId();
@@ -358,10 +368,22 @@ Persistable {
          * If the packet has L3 fields (e.g. NOT ARP), change the packet match:
          * 1) change the fields where the physical ips are stored
          */
+        //if (fm.getMatch().getDataLayerType() == Ethernet.TYPE_IPV4) {}
+
+        /*
+         * BNV does not have IP address translation due to switch-support.
+         * Can be enabled if switch supports it.
+         */
         if (fm.getMatch().getDataLayerType() == Ethernet.TYPE_IPV4) {
-            TenantMapper.rewriteMatch(this.getSrcPort().getTenantId(),
-                    fm.getMatch());
+            if (GlobalConfig.bnvTagType == TAG.TOS) {
+                TenantMapperTos.rewriteMatch(sw.getTenantId(), fm.getMatch());
+            } else if (GlobalConfig.bnvTagType == TAG.VLAN) {
+                TenantMapperVlan.rewriteMatch(sw.getTenantId(), fm.getMatch());
+            } else if (GlobalConfig.bnvTagType == TAG.NOTAG) {
+            /* Do Nothing */
+            }
         }
+
 
         /*
          * Get the list of physical links mapped to this virtual link, in
@@ -482,7 +504,14 @@ Persistable {
                 }
                 OVXLinkUtils lUtils = new OVXLinkUtils(this.getTenantId(), link.getLinkId(), flowId);
                 lUtils.rewriteMatch(fm.getMatch());
-                TenantMapper.rewriteMatch(this.getTenantId(), fm.getMatch());
+                //TenantMapper.rewriteMatch(this.getTenantId(), fm.getMatch());
+                if (GlobalConfig.bnvTagType == TAG.TOS) {
+                    TenantMapperTos.rewriteMatch(sw.getTenantId(), fm.getMatch());
+                } else if (GlobalConfig.bnvTagType == TAG.VLAN) {
+                    TenantMapperVlan.rewriteMatch(sw.getTenantId(), fm.getMatch());
+                } else if (GlobalConfig.bnvTagType == TAG.NOTAG){
+                    /* Do Nothing */
+                }
                 approvedActions.addAll(lUtils.unsetLinkFields(false, false));
             } else {
                 SwitchRoute.log.warn(
@@ -491,8 +520,15 @@ Persistable {
                 return;
             }
         } else {
-            TenantMapper.prependRewriteActions(
-                    this.getTenantId(), fm.getMatch(), approvedActions);
+            //TenantMapper.prependRewriteActions(
+            //       this.getTenantId(), fm.getMatch(), approvedActions);
+            if (GlobalConfig.bnvTagType == TAG.TOS) {
+                TenantMapperTos.prependRewriteActions(sw.getTenantId(), fm.getMatch(), approvedActions);
+            } else if (GlobalConfig.bnvTagType == TAG.VLAN) {
+                TenantMapperVlan.prependRewriteActions(sw.getTenantId(), fm.getMatch(), approvedActions);
+            } else if (GlobalConfig.bnvTagType == TAG.NOTAG){
+                    /* Do Nothing */
+            }
         }
 
         fm.getMatch().setInputPort(this.getSrcPort().getPhysicalPortNumber());

@@ -26,10 +26,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import net.onrc.openvirtex.api.Global.GlobalConfig;
+import net.onrc.openvirtex.api.Global.TAG;
 import net.onrc.openvirtex.api.service.handlers.TenantHandler;
 import net.onrc.openvirtex.db.DBManager;
 import net.onrc.openvirtex.elements.Mappable;
-import net.onrc.openvirtex.elements.Mapper.TenantMapper;
+import net.onrc.openvirtex.elements.Mapper.TenantMapperTos;
+import net.onrc.openvirtex.elements.Mapper.TenantMapperVlan;
 import net.onrc.openvirtex.elements.OVXMap;
 import net.onrc.openvirtex.elements.address.IPMapper;
 import net.onrc.openvirtex.elements.datapath.OVXFlowTable;
@@ -362,10 +365,18 @@ public class OVXLink extends Link<OVXPort, OVXSwitch> {
         long cookie = tenantId;
         fm.setCookie(cookie << 32);
 
+//        if (fm.getMatch().getDataLayerType() == Ethernet.TYPE_IPV4) {
+//            TenantMapper.rewriteMatch(this.tenantId, fm.getMatch());
+//        }
         if (fm.getMatch().getDataLayerType() == Ethernet.TYPE_IPV4) {
-            TenantMapper.rewriteMatch(this.tenantId, fm.getMatch());
+            if (GlobalConfig.bnvTagType == TAG.TOS) {
+                TenantMapperTos.rewriteMatch(this.tenantId, fm.getMatch());
+            } else if (GlobalConfig.bnvTagType == TAG.VLAN) {
+                TenantMapperVlan.rewriteMatch(this.tenantId, fm.getMatch());
+            } else if (GlobalConfig.bnvTagType == TAG.NOTAG) {
+                    /* Do Nothing */
+            }
         }
-
         /*
          * Get the list of physical links mapped to this virtual link, in
          * REVERSE ORDER

@@ -124,19 +124,6 @@ public final class TenantMapperVlan {
     }
 
     public static void prependRewriteActions(final Integer tenantId, final OFMatch match, List<OFAction> approvedActions) {
-        final List<OFAction> actions = new LinkedList<OFAction>();
-//        short vlan  = 1;
-//        final OVXActionVirtualLanIdentifier ovlan = new OVXActionVirtualLanIdentifier();
-//        if (!match.getWildcardObj().isWildcarded(Wildcards.Flag.DL_VLAN)) {
-//            vlan = match.getDataLayerVirtualLan();
-//        }
-//        System.out.println("Pravein: Rewriting Action.. to set vlan ID "+ vlan + " to "+ getPhysicalVlan(tenantId, vlan));
-//
-//        ovlan.setVirtualLanIdentifier(getPhysicalVlan(tenantId, vlan));
-//
-//        actions.add(0, ovlan);
-//        System.out.println("Actions : "+ actions.toString());
-//        return actions;
         final OVXActionVirtualLanIdentifier ovlan = new OVXActionVirtualLanIdentifier();
         boolean match_vlan = false;
         short vlan = 1;
@@ -147,7 +134,7 @@ public final class TenantMapperVlan {
         }
         System.out.println("Inside PrependRewriteActions .. Approved Actions so far :"+ approvedActions.toString());
         for (int i=0;i< approvedActions.size();i++) {
-            OFAction action = actions.get(i);
+            OFAction action = approvedActions.get(i);
             if (action.getType() == OFActionType.SET_VLAN_ID) {
                 OVXActionVirtualLanIdentifier existingVlan = (OVXActionVirtualLanIdentifier) action;
                 vlan = existingVlan.getVirtualLanIdentifier();
@@ -177,7 +164,6 @@ public final class TenantMapperVlan {
 
 
     public static void prependUnRewriteActions(final OFMatch match, List<OFAction> approvedActions) {
-        final List<OFAction> actions = new LinkedList<OFAction>();
         short vlan = 1;
         boolean match_vlan = false;
         int index = -1;

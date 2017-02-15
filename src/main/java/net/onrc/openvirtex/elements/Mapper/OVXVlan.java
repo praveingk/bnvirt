@@ -1,8 +1,10 @@
-package net.onrc.openvirtex.elements.Mapper;
-
 /**
+ * BNV - OVXVlan
  * Created by pravein on 4/12/16.
  */
+package net.onrc.openvirtex.elements.Mapper;
+
+
 public class OVXVlan {
     private final int tenantId;
     private final int vlan;

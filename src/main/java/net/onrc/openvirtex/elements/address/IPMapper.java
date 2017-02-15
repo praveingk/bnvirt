@@ -57,8 +57,8 @@ public final class IPMapper {
             } else {
                 pip = new PhysicalIPAddress(map.getVirtualNetwork(tenantId)
                         .nextIP());
-                log.info("Adding IP mapping {} -> {} for tenant {}", vip, pip,
-                        tenantId);
+//                log.info("Adding IP mapping {} -> {} for tenant {}", vip, pip,
+//                        tenantId);
                 map.addIP(pip, vip);
             }
             return pip.getIp();

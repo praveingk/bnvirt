@@ -51,24 +51,24 @@ public class CreateOVXPort extends ApiHandler<Map<String, Object>> {
         JSONRPC2Response resp = null;
 
         try {
-            System.out.println("##############PRAVEIN : Inside CreateOVXPort##################");
+            //System.out.println("##############PRAVEIN : Inside CreateOVXPort##################");
             final Number tenantId = HandlerUtils.<Number>fetchField(
                     TenantHandler.TENANT, params, true, null);
-            System.out.println("Tenant id "+ tenantId.intValue());
+            //System.out.println("Tenant id "+ tenantId.intValue());
             final Number virtdpid = HandlerUtils.<Number>fetchField(
                     TenantHandler.VDPID, params, true, null);
-            System.out.println("Virt DPID : "+ Long.toHexString(virtdpid.longValue()));
+           // System.out.println("Virt DPID : "+ Long.toHexString(virtdpid.longValue()));
             final Number physdpid = HandlerUtils.<Number>fetchField(
                     TenantHandler.PDPID, params, true, null);
-            System.out.println("Phys DPID : "+ Long.toHexString(physdpid.longValue()));
+            //System.out.println("Phys DPID : "+ Long.toHexString(physdpid.longValue()));
             final Number port = HandlerUtils.<Number>fetchField(
                     TenantHandler.PORT, params, true, null);
-            System.out.println("Phys DPID : "+ port.intValue());
+            //System.out.println("Phys DPID : "+ port.intValue());
 
             HandlerUtils.isValidTenantId(tenantId.intValue());
-            System.out.println("Listing DPIDS");
-            System.out.println("Virt DPID : "+ Long.toHexString(virtdpid.longValue()));
-            System.out.println("Phys DPID : "+ Long.toHexString(physdpid.longValue()));
+            //System.out.println("Listing DPIDS");
+            //System.out.println("Virt DPID : "+ Long.toHexString(virtdpid.longValue()));
+            //System.out.println("Phys DPID : "+ Long.toHexString(physdpid.longValue()));
             final OVXMap map = OVXMap.getInstance();
 
             final PhysicalSwitch physicalSwitch = PhysicalNetwork.getInstance()
@@ -91,7 +91,7 @@ public class CreateOVXPort extends ApiHandler<Map<String, Object>> {
                     physdpid.longValue(), port.shortValue());
 
 
-            System.out.println("Creating a virtual Port for "+ Long.toHexString(physdpid.longValue())+ " and port "+ port.shortValue());
+            //System.out.println("Creating a virtual Port for "+ Long.toHexString(physdpid.longValue())+ " and port "+ port.shortValue());
             final OVXPort ovxPort = virtualNetwork.createPort(physdpid.longValue(),
                     port.shortValue());
 

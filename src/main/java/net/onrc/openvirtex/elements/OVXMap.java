@@ -458,7 +458,7 @@ public final class OVXMap implements Mappable {
             final Integer tenantId) throws SwitchMappingException {
         final ConcurrentHashMap<Integer, OVXSwitch> sws = this.physicalSwitchMap
                 .get(physicalSwitch);
-        System.out.println("Getting virtual switch for "+ physicalSwitch.toString()  +  " and tenantid : "+ tenantId);
+        //System.out.println("Getting virtual switch for "+ physicalSwitch.toString()  +  " and tenantid : "+ tenantId);
         if (sws == null) {
             System.out.println("sws is null");
             throw new SwitchMappingException(physicalSwitch, OVXSwitch.class);
@@ -836,7 +836,7 @@ public final class OVXMap implements Mappable {
      */
     public boolean hasMAC(MACAddress mac) {
         //System.out.println("MacMap : "+ this.macMap.toString());
-        System.out.println("Checking for MAc : "+mac.toString());
+        //System.out.println("Checking for MAc : "+mac.toString());
         return this.macMap.getValueForExactKey(mac.toStringNoColon()) != null;
     }
 
