@@ -185,7 +185,8 @@ public class OVXFlowMod extends OFFlowMod implements Devirtualizable {
             System.out.println("No Inport.");
         }
         System.out.println("Is Vlan Present ? = "+ (wildcards & OFMatch.OFPFW_DL_VLAN) );
-        if ((wildcards & OFMatch.OFPFW_DL_VLAN) != 1) {
+        if ((wildcards & OFMatch.OFPFW_DL_VLAN) != OFMatch.OFPFW_DL_VLAN) {
+            System.out.println("Match : "+match.toString());
             System.out.println("Use of the VLAN prohibited.");
             return true;
         }
