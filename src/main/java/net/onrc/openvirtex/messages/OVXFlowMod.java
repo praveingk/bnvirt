@@ -49,7 +49,9 @@ import org.openflow.protocol.OFMatch;
 import org.openflow.protocol.Wildcards;
 import org.openflow.protocol.Wildcards.Flag;
 import org.openflow.protocol.action.OFAction;
+import org.openflow.protocol.action.OFActionStripVirtualLan;
 import org.openflow.protocol.action.OFActionType;
+import org.openflow.protocol.action.OFActionVirtualLanIdentifier;
 
 public class OVXFlowMod extends OFFlowMod implements Devirtualizable {
 
@@ -98,6 +100,13 @@ public class OVXFlowMod extends OFFlowMod implements Devirtualizable {
         OVXPort ovxInPort = sw.getPort(inport);
         OFMatch origMatch = this.match.clone();
         List<OFAction> origActions = new LinkedList<>();
+        if (isActionViolates(origActions)) {
+            System.out.println("FlowMod Violates Isolation!! Action VLan not supported!");
+            sw.sendMsg(OVXMessageUtil.makeErrorMsg(
+                    OFFlowModFailedCode.OFPFMFC_UNSUPPORTED, this), sw);
+            return;
+        }
+        
         for (final OFAction act : this.getActions()) {
             origActions.add(act);
         }
@@ -177,6 +186,22 @@ public class OVXFlowMod extends OFFlowMod implements Devirtualizable {
         }
     }
 
+    private boolean isActionViolates(List<OFAction> origActions) {
+        for (int i=0;i< origActions.size();i++) {
+            if (origActions.get(i).getType() == OFActionType.SET_VLAN_ID) {
+                OFActionVirtualLanIdentifier vlanAcion =  (OFActionVirtualLanIdentifier) origActions.get(i);
+                if (vlanAcion.getVirtualLanIdentifier() != 1) {
+                    System.out.println("Vlan of "+vlanAcion.getVirtualLanIdentifier() + " not Allowed!");
+                    return true;
+                }
+            }
+            if (origActions.get(i).getType() == OFActionType.STRIP_VLAN) {
+                System.out.println("Strip VLAN action not supported!");
+                return true;
+            }
+        }
+        return false;
+    }
     private boolean isMatchViolates() {
         int wildcards = match.getWildcards();
         //System.out.println("Wildcard match : "+ Integer.toBinaryString(wildcards));
@@ -184,12 +209,13 @@ public class OVXFlowMod extends OFFlowMod implements Devirtualizable {
         if ((wildcards & OFMatch.OFPFW_IN_PORT) == 1) {
             System.out.println("No Inport.");
         }
-        System.out.println("Is Vlan Present ? = "+ (wildcards & OFMatch.OFPFW_DL_VLAN) );
-        if ((wildcards & OFMatch.OFPFW_DL_VLAN) != OFMatch.OFPFW_DL_VLAN) {
-            System.out.println("Match : "+match.toString());
-            System.out.println("Use of the VLAN prohibited.");
-            return true;
-        }
+        /* No Need to prevent Vlan Matches. However, Throttle VLAN Action */
+        //System.out.println("Is Vlan Present ? = "+ (wildcards & OFMatch.OFPFW_DL_VLAN) );
+        //if ((wildcards & OFMatch.OFPFW_DL_VLAN) != OFMatch.OFPFW_DL_VLAN) {
+        //    System.out.println("Match : "+match.toString());
+        //   System.out.println("Use of the VLAN prohibited.");
+        //    return true;
+        //}
 
         if ((wildcards & OFMatch.OFPFW_DL_SRC) == OFMatch.OFPFW_DL_SRC && (wildcards & OFMatch.OFPFW_DL_DST) == OFMatch.OFPFW_DL_DST) {
             System.out.println("No Mac src/dest..");
