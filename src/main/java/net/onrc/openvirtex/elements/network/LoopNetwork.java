@@ -14,6 +14,7 @@ import java.util.Set;
 public class LoopNetwork {
     public static boolean isInitialized = false;
     public static ArrayList<DPIDandPortPair> loopPorts = new ArrayList<>();
+    public static ArrayList<DPIDandPortPair> corePorts = new ArrayList<>();
     public static boolean IsLoop(final long ovxSrcDpid,
                               final short ovxSrcPort, final long ovxDstDpid,
                               final short ovxDstPort) {
@@ -33,7 +34,7 @@ public class LoopNetwork {
         System.out.println("Initializing Loop ports..");
         int totalLoopPorts = 11;
         short port = 25;
-        short[] backbonePort = {48};
+        short[] backbonePorts = {48};
         PhysicalNetwork myNet = PhysicalNetwork.getInstance();
         Set<PhysicalSwitch> mySwitches = myNet.getSwitches();
         for (PhysicalSwitch mySwitch : mySwitches) {
@@ -49,7 +50,18 @@ public class LoopNetwork {
             }
         }
         for (PhysicalSwitch mySwitch1 : mySwitches) {
-            for (PhysicalSwitch)
+            for (PhysicalSwitch mySwitch2 : mySwitches) {
+                if (mySwitch1.equals(mySwitch2)) {
+                    continue;
+                }
+                for  (short backbonePort : backbonePorts) {
+                    DPIDandPort srcDP = new DPIDandPort(mySwitch1.getSwitchId(), backbonePort);
+                    DPIDandPort dstDP = new DPIDandPort(mySwitch2.getSwitchId(), backbonePort);
+                    DPIDandPortPair corePair = new DPIDandPortPair(srcDP, dstDP);
+                    corePorts.add(corePair);
+                }
+
+            }
         }
         isInitialized = true;
         for (int i=0;i< loopPorts.size();i++) {
@@ -79,5 +91,32 @@ public class LoopNetwork {
             myNet.createLink(dPort,sPort);
         }
 
+
+        for (int i=0;i< corePorts.size();i++) {
+            DPIDandPortPair myPair = corePorts.get(i);
+            System.out.println(myNet.dpidMap.toString());
+            PhysicalSwitch sSwitch = myNet.getSwitch(myPair.getSrc().getDpid());
+            if (sSwitch == null) {
+                System.out.println("sSwitch is null!");
+                return;
+            }
+            PhysicalPort sPort = sSwitch.getPort(myPair.getSrc().getPort());
+            if (sPort == null) {
+                System.out.println("sPort is null!");
+                return;
+            }
+            PhysicalSwitch dSwitch = myNet.getSwitch(myPair.getDst().getDpid());
+            if (sSwitch == null) {
+                System.out.println("dSwitch is null!");
+                return;
+            }
+            PhysicalPort dPort = dSwitch.getPort(myPair.getDst().getPort());
+            if (dPort == null ) {
+                System.out.println("dPort is null!");
+                return;
+            }
+            myNet.createLink(sPort,dPort);
+            myNet.createLink(dPort,sPort);
+        }
     }
 }
