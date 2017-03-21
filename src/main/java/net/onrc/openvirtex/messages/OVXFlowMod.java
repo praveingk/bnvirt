@@ -106,7 +106,7 @@ public class OVXFlowMod extends OFFlowMod implements Devirtualizable {
                     OFFlowModFailedCode.OFPFMFC_UNSUPPORTED, this), sw);
             return;
         }
-        
+
         for (final OFAction act : this.getActions()) {
             origActions.add(act);
         }

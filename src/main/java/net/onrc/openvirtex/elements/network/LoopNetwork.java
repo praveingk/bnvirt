@@ -6,6 +6,7 @@ import net.onrc.openvirtex.elements.datapath.PhysicalSwitch;
 import net.onrc.openvirtex.elements.port.PhysicalPort;
 
 import java.util.ArrayList;
+import java.util.Set;
 
 /**
  * Created by pravein on 9/27/16.
@@ -32,18 +33,25 @@ public class LoopNetwork {
         System.out.println("Initializing Loop ports..");
         int totalLoopPorts = 11;
         short port = 25;
-
-        for (short i=0;i< totalLoopPorts;i++) {
-            DPIDandPort srcDP = new DPIDandPort(new Long(0x000170106f954f00L), (short) (port));
-            port++;
-            DPIDandPort dstDP = new DPIDandPort(new Long(0x000170106f954f00L), (short) (port));
-            DPIDandPortPair loopPair = new DPIDandPortPair(srcDP, dstDP);
-            loopPorts.add(loopPair);
-            System.out.println(loopPair.toString());
-            port++;
+        short[] backbonePort = {48};
+        PhysicalNetwork myNet = PhysicalNetwork.getInstance();
+        Set<PhysicalSwitch> mySwitches = myNet.getSwitches();
+        for (PhysicalSwitch mySwitch : mySwitches) {
+            System.out.println("Creating links for loop ports");
+            for (short i = 0; i < totalLoopPorts; i++) {
+                DPIDandPort srcDP = new DPIDandPort(mySwitch.getSwitchId(), (short) (port));
+                port++;
+                DPIDandPort dstDP = new DPIDandPort(mySwitch.getSwitchId(), (short) (port));
+                DPIDandPortPair loopPair = new DPIDandPortPair(srcDP, dstDP);
+                loopPorts.add(loopPair);
+                System.out.println(loopPair.toString());
+                port++;
+            }
+        }
+        for (PhysicalSwitch mySwitch1 : mySwitches) {
+            for (PhysicalSwitch)
         }
         isInitialized = true;
-        PhysicalNetwork myNet = PhysicalNetwork.getInstance();
         for (int i=0;i< loopPorts.size();i++) {
             DPIDandPortPair myPair = loopPorts.get(i);
             System.out.println(myNet.dpidMap.toString());
