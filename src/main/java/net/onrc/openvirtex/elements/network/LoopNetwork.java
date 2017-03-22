@@ -60,6 +60,7 @@ public class LoopNetwork {
                     DPIDandPort dstDP = new DPIDandPort(mySwitch2.getSwitchId(), backbonePort);
                     DPIDandPortPair corePair = new DPIDandPortPair(srcDP, dstDP);
                     corePorts.add(corePair);
+                    System.out.println(corePair.toString());
                 }
 
             }
@@ -71,22 +72,22 @@ public class LoopNetwork {
             PhysicalSwitch sSwitch = myNet.getSwitch(myPair.getSrc().getDpid());
             if (sSwitch == null) {
                 System.out.println("sSwitch is null!");
-                return;
+                continue;
             }
             PhysicalPort sPort = sSwitch.getPort(myPair.getSrc().getPort());
             if (sPort == null) {
                 System.out.println("sPort is null!");
-                return;
+                continue;
             }
             PhysicalSwitch dSwitch = myNet.getSwitch(myPair.getDst().getDpid());
             if (sSwitch == null) {
                 System.out.println("dSwitch is null!");
-                return;
+                continue;
             }
             PhysicalPort dPort = dSwitch.getPort(myPair.getDst().getPort());
             if (dPort == null ) {
                 System.out.println("dPort is null!");
-                return;
+                continue;
             }
             myNet.createLink(sPort,dPort);
             myNet.createLink(dPort,sPort);
@@ -95,25 +96,27 @@ public class LoopNetwork {
 
         for (int i=0;i< corePorts.size();i++) {
             DPIDandPortPair myPair = corePorts.get(i);
+            System.out.println(myNet.dpidMap.toString());
+
             PhysicalSwitch sSwitch = myNet.getSwitch(myPair.getSrc().getDpid());
             if (sSwitch == null) {
                 System.out.println("sSwitch is null!");
-                return;
+                continue;
             }
             PhysicalPort sPort = sSwitch.getPort(myPair.getSrc().getPort());
-            if (sPort == null) {
-                System.out.println("sPort is null!");
-                return;
-            }
+                if (sPort == null) {
+                    System.out.println("sPort is null!");
+                    continue;
+                }
             PhysicalSwitch dSwitch = myNet.getSwitch(myPair.getDst().getDpid());
             if (sSwitch == null) {
                 System.out.println("dSwitch is null!");
-                return;
+                continue;
             }
             PhysicalPort dPort = dSwitch.getPort(myPair.getDst().getPort());
             if (dPort == null ) {
                 System.out.println("dPort is null!");
-                return;
+                continue;
             }
             myNet.createLink(sPort,dPort);
             myNet.createLink(dPort,sPort);
