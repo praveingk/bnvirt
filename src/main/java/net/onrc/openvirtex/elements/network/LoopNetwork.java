@@ -38,7 +38,7 @@ public class LoopNetwork {
         PhysicalNetwork myNet = PhysicalNetwork.getInstance();
         Set<PhysicalSwitch> mySwitches = myNet.getSwitches();
         for (PhysicalSwitch mySwitch : mySwitches) {
-            System.out.println("Creating links for loop ports");
+            System.out.println("Creating links for loop ports for Switch :"+ mySwitch.getSwitchId());
             for (short i = 0; i < totalLoopPorts; i++) {
                 DPIDandPort srcDP = new DPIDandPort(mySwitch.getSwitchId(), (short) (port));
                 port++;
@@ -54,6 +54,7 @@ public class LoopNetwork {
                 if (mySwitch1.equals(mySwitch2)) {
                     continue;
                 }
+                System.out.println("Creating links for backbone ports for Switch :"+ mySwitch1.getSwitchId()+ " and "+ mySwitch2.getSwitchId());
                 for  (short backbonePort : backbonePorts) {
                     DPIDandPort srcDP = new DPIDandPort(mySwitch1.getSwitchId(), backbonePort);
                     DPIDandPort dstDP = new DPIDandPort(mySwitch2.getSwitchId(), backbonePort);
@@ -94,7 +95,6 @@ public class LoopNetwork {
 
         for (int i=0;i< corePorts.size();i++) {
             DPIDandPortPair myPair = corePorts.get(i);
-            System.out.println(myNet.dpidMap.toString());
             PhysicalSwitch sSwitch = myNet.getSwitch(myPair.getSrc().getDpid());
             if (sSwitch == null) {
                 System.out.println("sSwitch is null!");
