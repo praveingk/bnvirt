@@ -30,15 +30,20 @@ public class LoopNetwork {
         return false;
     }
 
+    public static void setDeiniitalize() {
+        isInitialized = false;
+    }
+
     public static void initialize() {
         System.out.println("Initializing Loop ports..");
         int totalLoopPorts = 11;
-        short port = 25;
+        short startport = 25;
         short[] backbonePorts = {48};
         PhysicalNetwork myNet = PhysicalNetwork.getInstance();
         Set<PhysicalSwitch> mySwitches = myNet.getSwitches();
         for (PhysicalSwitch mySwitch : mySwitches) {
             System.out.println("Creating links for loop ports for Switch :"+ mySwitch.getSwitchId());
+            short port = startport;
             for (short i = 0; i < totalLoopPorts; i++) {
                 DPIDandPort srcDP = new DPIDandPort(mySwitch.getSwitchId(), (short) (port));
                 port++;

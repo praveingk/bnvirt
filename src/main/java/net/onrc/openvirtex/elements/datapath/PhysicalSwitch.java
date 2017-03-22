@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import net.onrc.openvirtex.core.io.OVXSendMsg;
 import net.onrc.openvirtex.elements.datapath.statistics.StatisticsManager;
+import net.onrc.openvirtex.elements.network.LoopNetwork;
 import net.onrc.openvirtex.elements.network.PhysicalNetwork;
 import net.onrc.openvirtex.elements.port.PhysicalPort;
 import net.onrc.openvirtex.exceptions.SwitchMappingException;
@@ -152,6 +153,7 @@ public class PhysicalSwitch extends Switch<PhysicalPort> {
         this.statsMan.stop();
         this.channel.disconnect();
         this.map.removePhysicalSwitch(this);
+        LoopNetwork.setDeiniitalize();
     }
 
     /**

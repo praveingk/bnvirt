@@ -54,7 +54,6 @@ public final class PhysicalNetwork extends
     private final ConcurrentHashMap<Long, SwitchDiscoveryManager> discoveryManager;
     private static HashedWheelTimer timer;
     private static Logger log = LogManager.getLogger(PhysicalNetwork.class.getName());
-    private boolean isLoopInitialized = false;
 
     private PhysicalNetwork() {
         PhysicalNetwork.log.info("Starting network discovery...");
@@ -266,9 +265,8 @@ public final class PhysicalNetwork extends
     }
 
     public void initializeLoopPorts() {
-        if (!isLoopInitialized) {
+        if (!LoopNetwork.isInitialized) {
             System.out.println("Initializing Loop ports..");
-            isLoopInitialized = true;
             LoopNetwork.initialize();
         }
     }
