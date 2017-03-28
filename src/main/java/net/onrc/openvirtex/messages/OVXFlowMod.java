@@ -83,11 +83,14 @@ public class OVXFlowMod extends OFFlowMod implements Devirtualizable {
          *
          * In such conditions, its best to deny the addition of the flow.
          */
-        if (isMatchViolates()) {
-            System.out.println("FlowMod Violates Isolation!!");
-            sw.sendMsg(OVXMessageUtil.makeErrorMsg(
-                    OFFlowModFailedCode.OFPFMFC_UNSUPPORTED, this), sw);
-            return;
+        if (GlobalConfig.bnvTagType == TAG.NOTAG) {
+            /* If there is no explicit tagging, we need a clear checking mechanism */
+            if (isMatchViolates()) {
+                System.out.println("FlowMod Violates Isolation!!");
+                sw.sendMsg(OVXMessageUtil.makeErrorMsg(
+                        OFFlowModFailedCode.OFPFMFC_UNSUPPORTED, this), sw);
+                return;
+            }
         }
 
 
@@ -221,6 +224,7 @@ public class OVXFlowMod extends OFFlowMod implements Devirtualizable {
             System.out.println("No Mac src/dest..");
             if ((wildcards & OFMatch.OFPFW_NW_SRC_ALL) == OFMatch.OFPFW_NW_SRC_ALL && (wildcards & OFMatch.OFPFW_NW_DST_ALL) == OFMatch.OFPFW_NW_DST_ALL) {
                 System.out.println("No ipsrc/dest too.. This can't be good..");
+                System.out.println(" Rejecting "+ match.toString());
                 return true;
             }
         }

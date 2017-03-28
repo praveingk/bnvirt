@@ -19,6 +19,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import net.onrc.openvirtex.api.Global.GlobalConfig;
+import net.onrc.openvirtex.api.Global.TAG;
 import net.onrc.openvirtex.api.service.handlers.ApiHandler;
 import net.onrc.openvirtex.api.service.handlers.HandlerUtils;
 import net.onrc.openvirtex.api.service.handlers.TenantHandler;
@@ -63,6 +65,15 @@ public class CreateOVXNetwork extends ApiHandler<Map<String, Object>> {
             final IPAddress addr = new OVXIPAddress(netAddress, -1);
             final OVXNetwork virtualNetwork = new OVXNetwork(ctrlUrls, addr,
                     netMask.shortValue());
+
+            if (GlobalConfig.bnvTagType == TAG.TOS) {
+                if (virtualNetwork.getTenantId() > 255) {
+                    resp = new JSONRPC2Response(new JSONRPC2Error(
+                            JSONRPC2Error.INVALID_PARAMS.getCode(), this.cmdName()
+                            + ": Unable to create virtual network, Exceeded Max tenants!!"), 0);
+                    return resp;
+                }
+            }
             virtualNetwork.register();
             this.log.info("Created virtual network {}",
                     virtualNetwork.getTenantId());

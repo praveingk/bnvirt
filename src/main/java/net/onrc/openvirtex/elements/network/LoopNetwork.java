@@ -36,9 +36,11 @@ public class LoopNetwork {
 
     public static void initialize() {
         System.out.println("Initializing Loop ports..");
+        // Make the below 12 for NCL Production
         int totalLoopPorts = 11;
         short startport = 25;
-        short[] backbonePorts = {48};
+        // Remove 48 for for NCL Production
+        short[] backbonePorts = {48,55,56,57,58};
         PhysicalNetwork myNet = PhysicalNetwork.getInstance();
         Set<PhysicalSwitch> mySwitches = myNet.getSwitches();
         for (PhysicalSwitch mySwitch : mySwitches) {

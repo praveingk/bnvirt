@@ -49,41 +49,41 @@ public final class TenantMapperTos {
     private TenantMapperTos() {
     }
 
-    public static synchronized short getPhysicalTag(Integer tenantId) {
-        return tenantId.shortValue();
+    public static synchronized byte getPhysicalTag(Integer tenantId) {
+        return tenantId.byteValue();
     }
 
 
     public static void rewriteMatch(final Integer tenantId, final OFMatch match) {
-//        byte tos = tenantId.byteValue();
-//        System.out.println("Pravein: Rewriting match.. setting tos to "+ tos);
-//        int wcard = match.getWildcards()
-//                & (~OFMatch.OFPFW_NW_TOS);
-//        match.setWildcards(wcard);
-//        match.setNetworkTypeOfService(tos);
+        byte tos = getPhysicalTag(tenantId);
+        System.out.println("Rewriting match: Setting ToS: "+ tos);
+        int wcard = match.getWildcards()
+                & (~OFMatch.OFPFW_NW_TOS);
+        match.setWildcards(wcard);
+        match.setNetworkTypeOfService(tos);
     }
 
 
     public static void prependRewriteActions(final Integer tenantId, final OFMatch match, List<OFAction> approvedActions) {
-//        final List<OFAction> actions = new LinkedList<OFAction>();
-//        byte tos  = tenantId.byteValue();
-//        final OVXActionNetworkTypeOfService ovtos = new OVXActionNetworkTypeOfService();
-////        if (!match.getWildcardObj().isWildcarded(Wildcards.Flag.DL_VLAN)) {
-////            vlan = match.getDataLayerVirtualLan();
-////        }
-//        System.out.println("Pravein: Rewriting Action.. to set tos to " + tenantId);
-////
-//        ovtos.setNetworkTypeOfService(tos);
-//
-////
-//        approvedActions.add(0, ovtos);
-//        System.out.println("Actions : "+ approvedActions.toString());
+        byte tos  = getPhysicalTag(tenantId);
+        final OVXActionNetworkTypeOfService ovtos = new OVXActionNetworkTypeOfService();
+
+        System.out.println("Rewriting Action: Setting ToS: " + tenantId);
+
+        ovtos.setNetworkTypeOfService(tos);
+
+        approvedActions.add(0, ovtos);
+        System.out.println("Actions : "+ approvedActions.toString());
     }
 
 
     public static void prependUnRewriteActions(final OFMatch match, List<OFAction> approvedActions) {
+        byte untos = 0;
+        final OVXActionNetworkTypeOfService ovtos = new OVXActionNetworkTypeOfService();
+        System.out.println("Pravein: Unsetting Action.. Setting ToS: " + 0);
 
-
+        ovtos.setNetworkTypeOfService(untos);
+        approvedActions.add(0, ovtos);
     }
 
 }
