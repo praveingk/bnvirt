@@ -368,21 +368,23 @@ Persistable {
          * If the packet has L3 fields (e.g. NOT ARP), change the packet match:
          * 1) change the fields where the physical ips are stored
          */
-        //if (fm.getMatch().getDataLayerType() == Ethernet.TYPE_IPV4) {}
+        if (fm.getMatch().getDataLayerType() == Ethernet.TYPE_IPV4) {
+            if (fm.getMatch().getDataLayerType() == Ethernet.TYPE_IPV4) {
+                if (GlobalConfig.bnvTagType == TAG.TOS) {
+                    TenantMapperTos.rewriteMatch(sw.getTenantId(), fm.getMatch());
+                } else if (GlobalConfig.bnvTagType == TAG.VLAN) {
+                    TenantMapperVlan.rewriteMatch(sw.getTenantId(), fm.getMatch());
+                } else if (GlobalConfig.bnvTagType == TAG.NOTAG) {
+                    /* Do Nothing */
+                }
+            }
+        }
 
         /*
          * BNV does not have IP address translation due to switch-support.
          * Can be enabled if switch supports it.
          */
-        if (fm.getMatch().getDataLayerType() == Ethernet.TYPE_IPV4) {
-            if (GlobalConfig.bnvTagType == TAG.TOS) {
-                TenantMapperTos.rewriteMatch(sw.getTenantId(), fm.getMatch());
-            } else if (GlobalConfig.bnvTagType == TAG.VLAN) {
-                TenantMapperVlan.rewriteMatch(sw.getTenantId(), fm.getMatch());
-            } else if (GlobalConfig.bnvTagType == TAG.NOTAG) {
-            /* Do Nothing */
-            }
-        }
+
 
 
         /*

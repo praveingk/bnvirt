@@ -65,10 +65,12 @@ public final class TenantMapperTos {
 
 
     public static void prependRewriteActions(final Integer tenantId, final OFMatch match, List<OFAction> approvedActions) {
-        byte tos  = getPhysicalTag(tenantId);
+        /* Below shifting is done because the switch doesnt not set the ECN bits (last 2 bits) for some reason */
+        Integer mid = tenantId << 2;
+        byte tos  = mid.byteValue();
         final OVXActionNetworkTypeOfService ovtos = new OVXActionNetworkTypeOfService();
 
-        System.out.println("Rewriting Action: Setting ToS: " + tenantId);
+        System.out.println("Rewriting Action: Setting ToS: " + tos);
 
         ovtos.setNetworkTypeOfService(tos);
 
