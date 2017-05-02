@@ -23,6 +23,7 @@ import java.util.Set;
 import net.onrc.openvirtex.api.service.handlers.TenantHandler;
 import net.onrc.openvirtex.db.DBManager;
 
+import net.onrc.openvirtex.exceptions.LinkMappingException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.openflow.protocol.OFPortStatus;
@@ -59,7 +60,7 @@ public class OVXPort extends Port<OVXSwitch, OVXLink> implements Persistable {
         this.physicalPort = port;
         try {
             // Pravein : API changing to New API, due to mapping of phys_dpid, port to virt_dpid.
-            System.out.println("Getting vswitch mapping of "+ Long.toHexString(physicalPort.getParentSwitch().getSwitchId()) + ", "+ physicalPort.getPortNumber());
+            System.out.println("Getting vswitch mapping of "+ Long.toHexString(physicalPort.getParentSwitch().getSwitchId().longValue()) + ", "+ physicalPort.getPortNumber());
             this.parentSwitch = OVXMap.getInstance().getVirtualSwitch(
                     port.getParentSwitch(),(int) physicalPort.getPortNumber(), tenantId);
         } catch (SwitchMappingException e) {
@@ -247,6 +248,7 @@ public class OVXPort extends Port<OVXSwitch, OVXLink> implements Persistable {
         Map<String, Object> dbObject = new HashMap<String, Object>();
         dbObject.putAll(this.getPhysicalPort().getDBObject());
         dbObject.put(TenantHandler.VPORT, this.portNumber);
+        dbObject.put(TenantHandler.VDPID, this.getParentSwitch().getSwitchId());
         return dbObject;
     }
 

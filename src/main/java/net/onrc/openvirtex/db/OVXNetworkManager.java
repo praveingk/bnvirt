@@ -24,12 +24,10 @@ import java.util.Set;
 
 import net.onrc.openvirtex.api.service.handlers.TenantHandler;
 import net.onrc.openvirtex.core.OpenVirteX;
+import net.onrc.openvirtex.elements.OVXMap;
 import net.onrc.openvirtex.elements.address.IPAddress;
 import net.onrc.openvirtex.elements.address.OVXIPAddress;
-import net.onrc.openvirtex.elements.datapath.DPIDandPort;
-import net.onrc.openvirtex.elements.datapath.DPIDandPortPair;
-import net.onrc.openvirtex.elements.datapath.PhysicalSwitch;
-import net.onrc.openvirtex.elements.datapath.Switch;
+import net.onrc.openvirtex.elements.datapath.*;
 import net.onrc.openvirtex.elements.host.Host;
 import net.onrc.openvirtex.elements.link.Link;
 import net.onrc.openvirtex.elements.link.PhysicalLink;
@@ -307,10 +305,12 @@ public class OVXNetworkManager {
         final List<Map<String, Object>> switches = (List<Map<String, Object>>) this.vnet
                 .get(Switch.DB_KEY);
         if (switches != null) {
+            System.out.println("Creating Switches..");
             for (Map<String, Object> sw : switches) {
                 List<Long> dpids = (List<Long>) sw.get(TenantHandler.DPIDS);
                 long switchId = (long) sw.get(TenantHandler.VDPID);
                 try {
+                    System.out.println("Creating switch : "+ switchId);
                     virtualNetwork.createSwitch(dpids, switchId);
                 } catch (IndexOutOfBoundException e) {
                     OVXNetworkManager.log.error(
@@ -325,13 +325,22 @@ public class OVXNetworkManager {
         final List<Map<String, Object>> ports = (List<Map<String, Object>>) this.vnet
                 .get(Port.DB_KEY);
         if (ports != null) {
+            System.out.println("Creating Ports..");
             for (Map<String, Object> port : ports) {
                 long physicalDpid = (Long) port.get(TenantHandler.DPID);
                 short portNumber = ((Integer) port.get(TenantHandler.PORT))
                         .shortValue();
                 short vportNumber = ((Integer) port.get(TenantHandler.VPORT))
                         .shortValue();
+                long virtualDpid = (Long) port.get(TenantHandler.VDPID);
                 try {
+                    System.out.println("Creating port : "+ Long.toHexString(physicalDpid)+" ," + portNumber+" , "+ vportNumber);
+                    OVXMap map = OVXMap.getInstance();
+                    final PhysicalSwitch physicalSwitch = PhysicalNetwork.getInstance()
+                            .getSwitch(physicalDpid);
+                    final OVXSwitch virtualSwitch = virtualNetwork.getSwitch(virtualDpid);
+                    map.addSwitchPort(physicalSwitch, (int) portNumber, this.tenantId, virtualSwitch);
+
                     virtualNetwork.createPort(physicalDpid, portNumber,
                             vportNumber);
                 } catch (IndexOutOfBoundException e) {
@@ -424,6 +433,7 @@ public class OVXNetworkManager {
         // link is not created again
         final List<Integer> linkIds = new ArrayList<Integer>();
         if (links != null) {
+            System.out.println("Creating Switches..");
             for (Map<String, Object> link : links) {
                 // Skip link if we already handled the reverse
                 Integer linkId = (Integer) link.get(TenantHandler.LINK);
