@@ -97,7 +97,6 @@ public final class PhysicalNetwork extends
     @Override
     public synchronized void addSwitch(final PhysicalSwitch sw) {
         super.addSwitch(sw);
-        LoopNetwork.initBNVirtSwitch(sw);
         this.discoveryManager.put(sw.getSwitchId(), new SwitchDiscoveryManager(
                 sw, OpenVirteXController.getInstance().getUseBDDP()));
         DBManager.getInstance().addSwitch(sw.getSwitchId());
