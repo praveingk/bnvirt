@@ -34,8 +34,8 @@ public class LoopNetwork {
         isInitialized = false;
     }
 
-    public static void initSwitchLoops(PhysicalSwitch mySwitch) {
-
+    public static void initBNVirtSwitch(PhysicalSwitch mySwitch) {
+        System.out.println("Initialize BNVirt N/W for "+ Long.toHexString(mySwitch.getSwitchId()));
         ArrayList<DPIDandPortPair> addPorts = new ArrayList<>();
         // Make the below 12 for NCL Production
         int totalLoopPorts = 11;
@@ -45,7 +45,7 @@ public class LoopNetwork {
         PhysicalNetwork myNet = PhysicalNetwork.getInstance();
         Set<PhysicalSwitch> addedSwitches = myNet.getSwitches();
         // Create Loop Ports First
-        System.out.println("Creating links for loop ports for Switch :"+ mySwitch.getSwitchId());
+        System.out.println("Creating links for loop ports for Switch :"+ Long.toHexString(mySwitch.getSwitchId()));
         short port = startport;
         for (short i = 0; i < totalLoopPorts; i++) {
             DPIDandPort srcDP = new DPIDandPort(mySwitch.getSwitchId(), (short) (port));
@@ -63,7 +63,7 @@ public class LoopNetwork {
             if (mySwitch.equals(otherSwitch)) {
                 continue;
             }
-            System.out.println("Creating links for backbone ports for Switch :"+ mySwitch.getSwitchId()+ " and "+ otherSwitch.getSwitchId());
+            System.out.println("Creating links for backbone ports for Switch :"+ Long.toHexString(mySwitch.getSwitchId())+ " and "+ Long.toHexString(otherSwitch.getSwitchId()));
             for  (short backbonePort : backbonePorts) {
                 DPIDandPort srcDP = new DPIDandPort(mySwitch.getSwitchId(), backbonePort);
                 DPIDandPort dstDP = new DPIDandPort(otherSwitch.getSwitchId(), backbonePort);
