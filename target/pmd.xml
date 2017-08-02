@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<pmd version="5.0.5" timestamp="2017-08-02T11:06:32.906">
+<pmd version="5.0.5" timestamp="2017-08-02T11:17:09.932">
 <file name="/home/pravein/myResearch/NCL/bnvirt/src/main/java/net/onrc/openvirtex/api/Global/GlobalConfig.java">
 <violation beginline="1" endline="1" begincolumn="9" endcolumn="38" rule="PackageCase" ruleset="Naming" package="net.onrc.openvirtex.api.Global" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.0.5/rules/java/naming.html#PackageCase" priority="3">
 Package name contains upper case characters
@@ -597,37 +597,37 @@ Private field 'portToMngr' could be made final; it is only initialized in the de
 <violation beginline="142" endline="142" begincolumn="18" endcolumn="26" rule="AvoidCatchingGenericException" ruleset="Strict Exceptions" package="net.onrc.openvirtex.db" class="DBManager" method="init" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.0.5/rules/java/strictexception.html#AvoidCatchingGenericException" priority="3">
 Avoid catching generic exceptions such as NullPointerException, RuntimeException, Exception in try-catch block
 </violation>
-<violation beginline="165" endline="165" begincolumn="18" endcolumn="26" rule="AvoidCatchingGenericException" ruleset="Strict Exceptions" package="net.onrc.openvirtex.db" class="DBManager" method="setIndex" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.0.5/rules/java/strictexception.html#AvoidCatchingGenericException" priority="3">
+<violation beginline="164" endline="164" begincolumn="18" endcolumn="26" rule="AvoidCatchingGenericException" ruleset="Strict Exceptions" package="net.onrc.openvirtex.db" class="DBManager" method="setIndex" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.0.5/rules/java/strictexception.html#AvoidCatchingGenericException" priority="3">
 Avoid catching generic exceptions such as NullPointerException, RuntimeException, Exception in try-catch block
 </violation>
-<violation beginline="186" endline="186" begincolumn="18" endcolumn="26" rule="AvoidCatchingGenericException" ruleset="Strict Exceptions" package="net.onrc.openvirtex.db" class="DBManager" method="clear" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.0.5/rules/java/strictexception.html#AvoidCatchingGenericException" priority="3">
+<violation beginline="185" endline="185" begincolumn="18" endcolumn="26" rule="AvoidCatchingGenericException" ruleset="Strict Exceptions" package="net.onrc.openvirtex.db" class="DBManager" method="clear" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.0.5/rules/java/strictexception.html#AvoidCatchingGenericException" priority="3">
 Avoid catching generic exceptions such as NullPointerException, RuntimeException, Exception in try-catch block
 </violation>
-<violation beginline="204" endline="204" begincolumn="18" endcolumn="26" rule="AvoidCatchingGenericException" ruleset="Strict Exceptions" package="net.onrc.openvirtex.db" class="DBManager" method="close" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.0.5/rules/java/strictexception.html#AvoidCatchingGenericException" priority="3">
+<violation beginline="203" endline="203" begincolumn="18" endcolumn="26" rule="AvoidCatchingGenericException" ruleset="Strict Exceptions" package="net.onrc.openvirtex.db" class="DBManager" method="close" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.0.5/rules/java/strictexception.html#AvoidCatchingGenericException" priority="3">
 Avoid catching generic exceptions such as NullPointerException, RuntimeException, Exception in try-catch block
 </violation>
-<violation beginline="225" endline="225" begincolumn="18" endcolumn="26" rule="AvoidCatchingGenericException" ruleset="Strict Exceptions" package="net.onrc.openvirtex.db" class="DBManager" method="createDoc" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.0.5/rules/java/strictexception.html#AvoidCatchingGenericException" priority="3">
+<violation beginline="224" endline="224" begincolumn="18" endcolumn="26" rule="AvoidCatchingGenericException" ruleset="Strict Exceptions" package="net.onrc.openvirtex.db" class="DBManager" method="createDoc" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.0.5/rules/java/strictexception.html#AvoidCatchingGenericException" priority="3">
 Avoid catching generic exceptions such as NullPointerException, RuntimeException, Exception in try-catch block
 </violation>
-<violation beginline="229" endline="229" begincolumn="17" endcolumn="17" rule="AvoidInstanceofChecksInCatchClause" ruleset="Design" package="net.onrc.openvirtex.db" class="DBManager" method="createDoc" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.0.5/rules/java/design.html#AvoidInstanceofChecksInCatchClause" priority="3">
+<violation beginline="228" endline="228" begincolumn="17" endcolumn="17" rule="AvoidInstanceofChecksInCatchClause" ruleset="Design" package="net.onrc.openvirtex.db" class="DBManager" method="createDoc" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.0.5/rules/java/design.html#AvoidInstanceofChecksInCatchClause" priority="3">
 An instanceof check is being performed on the caught exception.  Create a separate catch clause for this exception type.
 </violation>
-<violation beginline="253" endline="253" begincolumn="18" endcolumn="26" rule="AvoidCatchingGenericException" ruleset="Strict Exceptions" package="net.onrc.openvirtex.db" class="DBManager" method="removeDoc" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.0.5/rules/java/strictexception.html#AvoidCatchingGenericException" priority="3">
+<violation beginline="252" endline="252" begincolumn="18" endcolumn="26" rule="AvoidCatchingGenericException" ruleset="Strict Exceptions" package="net.onrc.openvirtex.db" class="DBManager" method="removeDoc" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.0.5/rules/java/strictexception.html#AvoidCatchingGenericException" priority="3">
 Avoid catching generic exceptions such as NullPointerException, RuntimeException, Exception in try-catch block
 </violation>
-<violation beginline="277" endline="277" begincolumn="18" endcolumn="26" rule="AvoidCatchingGenericException" ruleset="Strict Exceptions" package="net.onrc.openvirtex.db" class="DBManager" method="save" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.0.5/rules/java/strictexception.html#AvoidCatchingGenericException" priority="3">
+<violation beginline="276" endline="276" begincolumn="18" endcolumn="26" rule="AvoidCatchingGenericException" ruleset="Strict Exceptions" package="net.onrc.openvirtex.db" class="DBManager" method="save" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.0.5/rules/java/strictexception.html#AvoidCatchingGenericException" priority="3">
 Avoid catching generic exceptions such as NullPointerException, RuntimeException, Exception in try-catch block
 </violation>
-<violation beginline="299" endline="299" begincolumn="18" endcolumn="26" rule="AvoidCatchingGenericException" ruleset="Strict Exceptions" package="net.onrc.openvirtex.db" class="DBManager" method="remove" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.0.5/rules/java/strictexception.html#AvoidCatchingGenericException" priority="3">
+<violation beginline="298" endline="298" begincolumn="18" endcolumn="26" rule="AvoidCatchingGenericException" ruleset="Strict Exceptions" package="net.onrc.openvirtex.db" class="DBManager" method="remove" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.0.5/rules/java/strictexception.html#AvoidCatchingGenericException" priority="3">
 Avoid catching generic exceptions such as NullPointerException, RuntimeException, Exception in try-catch block
 </violation>
-<violation beginline="323" endline="323" begincolumn="18" endcolumn="26" rule="AvoidCatchingGenericException" ruleset="Strict Exceptions" package="net.onrc.openvirtex.db" class="DBManager" method="removeSwitchPath" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.0.5/rules/java/strictexception.html#AvoidCatchingGenericException" priority="3">
+<violation beginline="322" endline="322" begincolumn="18" endcolumn="26" rule="AvoidCatchingGenericException" ruleset="Strict Exceptions" package="net.onrc.openvirtex.db" class="DBManager" method="removeSwitchPath" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.0.5/rules/java/strictexception.html#AvoidCatchingGenericException" priority="3">
 Avoid catching generic exceptions such as NullPointerException, RuntimeException, Exception in try-catch block
 </violation>
-<violation beginline="346" endline="346" begincolumn="18" endcolumn="26" rule="AvoidCatchingGenericException" ruleset="Strict Exceptions" package="net.onrc.openvirtex.db" class="DBManager" method="removeLinkPath" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.0.5/rules/java/strictexception.html#AvoidCatchingGenericException" priority="3">
+<violation beginline="345" endline="345" begincolumn="18" endcolumn="26" rule="AvoidCatchingGenericException" ruleset="Strict Exceptions" package="net.onrc.openvirtex.db" class="DBManager" method="removeLinkPath" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.0.5/rules/java/strictexception.html#AvoidCatchingGenericException" priority="3">
 Avoid catching generic exceptions such as NullPointerException, RuntimeException, Exception in try-catch block
 </violation>
-<violation beginline="397" endline="397" begincolumn="18" endcolumn="26" rule="AvoidCatchingGenericException" ruleset="Strict Exceptions" package="net.onrc.openvirtex.db" class="DBManager" method="readOVXNetworks" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.0.5/rules/java/strictexception.html#AvoidCatchingGenericException" priority="3">
+<violation beginline="396" endline="396" begincolumn="18" endcolumn="26" rule="AvoidCatchingGenericException" ruleset="Strict Exceptions" package="net.onrc.openvirtex.db" class="DBManager" method="readOVXNetworks" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.0.5/rules/java/strictexception.html#AvoidCatchingGenericException" priority="3">
 Avoid catching generic exceptions such as NullPointerException, RuntimeException, Exception in try-catch block
 </violation>
 </file>

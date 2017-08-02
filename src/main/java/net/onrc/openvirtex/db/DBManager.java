@@ -141,7 +141,6 @@ public final class DBManager {
 
         } catch (Exception e) {
             log.error("Failed to initialize database: {}", e.getStackTrace());
-            e.printStackTrace();
         } finally {
             // Restore error stream
             System.setErr(ps);
@@ -397,7 +396,6 @@ public final class DBManager {
         } catch (Exception e) {
             log.error("Failed to load virtual networks from db: {}",
                     e.getMessage());
-            e.printStackTrace();
         } finally {
             System.setErr(ps);
         }
