@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<pmd version="5.0.5" timestamp="2017-08-02T11:17:09.932">
+<pmd version="5.0.5" timestamp="2017-08-02T11:41:31.561">
 <file name="/home/pravein/myResearch/NCL/bnvirt/src/main/java/net/onrc/openvirtex/api/Global/GlobalConfig.java">
 <violation beginline="1" endline="1" begincolumn="9" endcolumn="38" rule="PackageCase" ruleset="Naming" package="net.onrc.openvirtex.api.Global" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.0.5/rules/java/naming.html#PackageCase" priority="3">
 Package name contains upper case characters
@@ -627,7 +627,7 @@ Avoid catching generic exceptions such as NullPointerException, RuntimeException
 <violation beginline="345" endline="345" begincolumn="18" endcolumn="26" rule="AvoidCatchingGenericException" ruleset="Strict Exceptions" package="net.onrc.openvirtex.db" class="DBManager" method="removeLinkPath" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.0.5/rules/java/strictexception.html#AvoidCatchingGenericException" priority="3">
 Avoid catching generic exceptions such as NullPointerException, RuntimeException, Exception in try-catch block
 </violation>
-<violation beginline="396" endline="396" begincolumn="18" endcolumn="26" rule="AvoidCatchingGenericException" ruleset="Strict Exceptions" package="net.onrc.openvirtex.db" class="DBManager" method="readOVXNetworks" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.0.5/rules/java/strictexception.html#AvoidCatchingGenericException" priority="3">
+<violation beginline="405" endline="405" begincolumn="18" endcolumn="26" rule="AvoidCatchingGenericException" ruleset="Strict Exceptions" package="net.onrc.openvirtex.db" class="DBManager" method="readOVXNetworks" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.0.5/rules/java/strictexception.html#AvoidCatchingGenericException" priority="3">
 Avoid catching generic exceptions such as NullPointerException, RuntimeException, Exception in try-catch block
 </violation>
 </file>

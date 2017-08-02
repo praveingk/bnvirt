@@ -368,7 +368,10 @@ public final class DBManager {
                 try {
                     // Create vnet manager for each virtual network
                     mngr = new OVXNetworkManager(vnet);
+                    System.out.println("Created OVX Manager");
                     OVXNetwork.reserveTenantId(mngr.getTenantId());
+                    System.out.println("Reserved tenant id : "+ mngr.getTenantId());
+
                     // Accessing DB_KEY field through a class derived from the
                     // abstract OVXSwitch
                     List<Map<String, Object>> switches = (List<Map<String, Object>>) vnet
@@ -379,10 +382,16 @@ public final class DBManager {
                             .get(Port.DB_KEY);
                     List<Map<String, Object>> routes = (List<Map<String, Object>>) vnet
                             .get(SwitchRoute.DB_KEY);
+                    System.out.println("Initialized Lists..");
                     this.readOVXSwitches(switches, mngr);
+                    System.out.println("Read OVX Switches.");
                     this.readOVXLinks(links, mngr);
+                    System.out.println("Read OVX Links.");
                     this.readOVXPorts(ports, mngr);
+                    System.out.println("Read OVX Ports.");
                     this.readOVXRoutes(routes, mngr);
+                    System.out.println("Read OVX Routes.");
+
                     DBManager.log
                             .info("Virtual network {} waiting for {} switches, {} links and {} ports",
                                     mngr.getTenantId(), mngr.getSwitchCount(),
