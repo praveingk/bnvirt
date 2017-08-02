@@ -80,10 +80,10 @@ public class OVXPacketIn extends OFPacketIn implements Virtualizable {
             this.tenantId = this.fetchTenantId(match, map, true);
             //System.out.println("Pravein : This port is Edge.");
             if (this.tenantId == null) {
-                this.log.warn(
-                        "PacketIn {} does not belong to any virtual network; "
-                                + "dropping and installing a temporary drop rule",
-                        this);
+//                this.log.warn(
+//                        "PacketIn {} does not belong to any virtual network; "
+//                                + "dropping and installing a temporary drop rule",
+//                        this);
                 this.installDropRule(sw, match);
                 return;
             }
@@ -247,10 +247,10 @@ public class OVXPacketIn extends OFPacketIn implements Virtualizable {
 
         this.tenantId = this.fetchTenantId(match, map, true);
         if (this.tenantId == null) {
-            this.log.warn(
-                    "PacketIn {} does not belong to any virtual network; "
-                            + "dropping and installing a temporary drop rule",
-                    this);
+//            this.log.warn(
+//                    "PacketIn {} does not belong to any virtual network; "
+//                            + "dropping and installing a temporary drop rule",
+//                    this);
             this.installDropRule(sw, match);
             return;
         }

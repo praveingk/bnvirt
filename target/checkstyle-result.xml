@@ -1766,6 +1766,7 @@
 <error line="110" severity="warning" message="Missing a Javadoc comment." source="com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocTypeCheck"/>
 <error line="112" column="19" severity="warning" message="Variable &apos;sw&apos; must be private and have accessor methods." source="com.puppycrawl.tools.checkstyle.checks.design.VisibilityModifierCheck"/>
 <error line="115" column="9" severity="warning" message="Missing a Javadoc comment." source="com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocMethodCheck"/>
+<error line="135" column="28" severity="error" message="Must have at least one statement." source="com.puppycrawl.tools.checkstyle.checks.blocks.EmptyBlockCheck"/>
 </file>
 <file name="/home/pravein/myResearch/NCL/bnvirt/src/main/java/net/onrc/openvirtex/core/io/HandshakeTimeoutHandler.java">
 <error line="38" column="28" severity="warning" message="Variable &apos;channelHandler&apos; must be private and have accessor methods." source="com.puppycrawl.tools.checkstyle.checks.design.VisibilityModifierCheck"/>
