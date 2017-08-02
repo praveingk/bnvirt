@@ -362,11 +362,13 @@ public final class DBManager {
             DBCollection coll = this.collections.get(DBManager.DB_VNET);
             DBCursor cursor = coll.find();
             log.info("Loading {} virtual networks from database", cursor.size());
+            System.out.println("Starting to load networks from DB...");
             while (cursor.hasNext()) {
                 OVXNetworkManager mngr = null;
                 Map<String, Object> vnet = cursor.next().toMap();
                 try {
                     // Create vnet manager for each virtual network
+                    System.out.println("Creating OVX Manager");
                     mngr = new OVXNetworkManager(vnet);
                     System.out.println("Created OVX Manager");
                     OVXNetwork.reserveTenantId(mngr.getTenantId());
