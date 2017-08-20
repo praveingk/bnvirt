@@ -367,7 +367,7 @@ public final class DBManager {
                 OVXNetworkManager mngr = null;
                 Map<String, Object> vnet = cursor.next().toMap();
                 try {
-                    // Create vnet manager for each virtual network
+                    // Create vnet manager for each virtual networkovxnet
                     System.out.println("Creating OVX Manager");
                     mngr = new OVXNetworkManager(vnet);
                     System.out.println("Created OVX Manager");

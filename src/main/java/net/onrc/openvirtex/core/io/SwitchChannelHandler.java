@@ -21,7 +21,9 @@
  */
 package net.onrc.openvirtex.core.io;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -896,11 +898,31 @@ public class SwitchChannelHandler extends OFChannelHandler {
                     this.getSwitchInfoString(), this.state, e.getCause());
 
             ctx.getChannel().close();
+            executeCommand("sudo killall java");
             throw new RuntimeException(e.getCause());
         }
         this.log.debug(e.getCause());
     }
+    private String executeCommand(String command) {
+        StringBuffer output = new StringBuffer();
+        Process p;
+        try {
+            p = Runtime.getRuntime().exec(command);
+            p.waitFor();
+            BufferedReader reader =
+                    new BufferedReader(new InputStreamReader(p.getInputStream()));
+            String line = "";
+            while ((line = reader.readLine())!= null) {
+                output.append(line + "\n");
+            }
 
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return output.toString();
+
+    }
     /*
      * Set the state for this channel
      */

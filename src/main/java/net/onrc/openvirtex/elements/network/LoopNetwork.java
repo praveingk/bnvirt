@@ -38,10 +38,10 @@ public class LoopNetwork {
         System.out.println("Initialize BNVirt N/W for "+ Long.toHexString(mySwitch.getSwitchId()));
         ArrayList<DPIDandPortPair> addPorts = new ArrayList<>();
         // Make the below 12 for NCL Production
-        int totalLoopPorts = 11;
+        int totalLoopPorts = 12;
         short startport = 25;
         // Remove 48 for for NCL Production
-        short[] backbonePorts = {48,55,56,57,58};
+        short[] backbonePorts = {55,56,57,58};
         PhysicalNetwork myNet = PhysicalNetwork.getInstance();
         Set<PhysicalSwitch> addedSwitches = myNet.getSwitches();
         // Create Loop Ports First
