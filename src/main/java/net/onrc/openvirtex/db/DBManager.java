@@ -32,10 +32,12 @@ import net.onrc.openvirtex.elements.network.OVXNetwork;
 import net.onrc.openvirtex.elements.port.Port;
 import net.onrc.openvirtex.exceptions.DuplicateIndexException;
 import net.onrc.openvirtex.exceptions.IndexOutOfBoundException;
+import net.onrc.openvirtex.exceptions.SwitchMappingException;
 import net.onrc.openvirtex.routing.SwitchRoute;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.projectfloodlight.openflow.types.OFPort;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.DB;
@@ -140,7 +142,7 @@ public final class DBManager {
             }
 
         } catch (Exception e) {
-            log.error("Failed to initialize database: {}", e.getStackTrace());
+            log.error("Failed to initialize database: {}", e.getMessage());
         } finally {
             // Restore error stream
             System.setErr(ps);
@@ -362,18 +364,13 @@ public final class DBManager {
             DBCollection coll = this.collections.get(DBManager.DB_VNET);
             DBCursor cursor = coll.find();
             log.info("Loading {} virtual networks from database", cursor.size());
-            System.out.println("Starting to load networks from DB...");
             while (cursor.hasNext()) {
                 OVXNetworkManager mngr = null;
                 Map<String, Object> vnet = cursor.next().toMap();
                 try {
-                    // Create vnet manager for each virtual networkovxnet
-                    System.out.println("Creating OVX Manager");
+                    // Create vnet manager for each virtual network
                     mngr = new OVXNetworkManager(vnet);
-                    System.out.println("Created OVX Manager");
                     OVXNetwork.reserveTenantId(mngr.getTenantId());
-                    System.out.println("Reserved tenant id : "+ mngr.getTenantId());
-
                     // Accessing DB_KEY field through a class derived from the
                     // abstract OVXSwitch
                     List<Map<String, Object>> switches = (List<Map<String, Object>>) vnet
@@ -384,16 +381,10 @@ public final class DBManager {
                             .get(Port.DB_KEY);
                     List<Map<String, Object>> routes = (List<Map<String, Object>>) vnet
                             .get(SwitchRoute.DB_KEY);
-                    System.out.println("Initialized Lists..");
                     this.readOVXSwitches(switches, mngr);
-                    System.out.println("Read OVX Switches.");
                     this.readOVXLinks(links, mngr);
-                    System.out.println("Read OVX Links.");
                     this.readOVXPorts(ports, mngr);
-                    System.out.println("Read OVX Ports.");
                     this.readOVXRoutes(routes, mngr);
-                    System.out.println("Read OVX Routes.");
-
                     DBManager.log
                             .info("Virtual network {} waiting for {} switches, {} links and {} ports",
                                     mngr.getTenantId(), mngr.getSwitchCount(),
@@ -463,11 +454,12 @@ public final class DBManager {
                 Long srcDpid = (Long) hop.get(TenantHandler.SRC_DPID);
                 Short srcPort = ((Integer) hop.get(TenantHandler.SRC_PORT))
                         .shortValue();
+                
                 Long dstDpid = (Long) hop.get(TenantHandler.DST_DPID);
                 Short dstPort = ((Integer) hop.get(TenantHandler.DST_PORT))
                         .shortValue();
                 DPIDandPortPair dpp = new DPIDandPortPair(new DPIDandPort(
-                        srcDpid, srcPort), new DPIDandPort(dstDpid, dstPort));
+                        srcDpid, OFPort.ofShort(srcPort)), new DPIDandPort(dstDpid, OFPort.ofShort(dstPort)));
                 // Register link in current manager
                 mngr.registerLink(dpp);
                 // Update list of managers that wait for this link
@@ -516,7 +508,7 @@ public final class DBManager {
             Long dpid = (Long) port.get(TenantHandler.DPID);
             Short portNumber = ((Integer) port.get(TenantHandler.PORT))
                     .shortValue();
-            DPIDandPort p = new DPIDandPort(dpid, portNumber);
+            DPIDandPort p = new DPIDandPort(dpid, OFPort.ofShort(portNumber));
             // Register port in current manager
             mngr.registerPort(p);
             // Update list of managers that wait for this port
@@ -552,7 +544,7 @@ public final class DBManager {
                 Short dstPort = ((Integer) hop.get(TenantHandler.DST_PORT))
                         .shortValue();
                 DPIDandPortPair dpp = new DPIDandPortPair(new DPIDandPort(
-                        srcDpid, srcPort), new DPIDandPort(dstDpid, dstPort));
+                        srcDpid, OFPort.ofShort(srcPort)), new DPIDandPort(dstDpid, OFPort.ofShort(dstPort)));
                 // Register links in the appropriate manager
                 mngr.registerLink(dpp);
                 List<OVXNetworkManager> mngrs = this.linkToMngr.get(dpp);
@@ -585,8 +577,9 @@ public final class DBManager {
      * switch. This method is called by the PhysicalSwitch.boot() method.
      *
      * @param dpid the swith dpid
+     * @throws SwitchMappingException 
      */
-    public void addSwitch(final Long dpid) {
+    public void addSwitch(final Long dpid) throws SwitchMappingException {
         // Disregard physical switch creation if OVX was started with --dbClear
         if (!this.clear) {
             List<OVXNetworkManager> completedMngrs = new ArrayList<OVXNetworkManager>();
@@ -633,8 +626,9 @@ public final class DBManager {
      * link. Removes OVXNetworkManagers that were booted after adding this link.
      *
      * @param dpp physical link given as a dpid and port pair
+     * @throws SwitchMappingException 
      */
-    public void addLink(final DPIDandPortPair dpp) {
+    public void addLink(final DPIDandPortPair dpp) throws SwitchMappingException {
         // Disregard physical link creation if OVX was started with --dbClear
         if (!this.clear) {
             List<OVXNetworkManager> completedMngrs = new ArrayList<OVXNetworkManager>();
@@ -680,8 +674,9 @@ public final class DBManager {
      * port. Remove OVXNetworkManagers that were booted after adding this port.
      *
      * @param port the port given as a dpid and port pair
+     * @throws SwitchMappingException 
      */
-    public void addPort(final DPIDandPort port) {
+    public void addPort(final DPIDandPort port) throws SwitchMappingException {
         // Disregard physical port creation if OVX was started with --dbClear
         if (!this.clear) {
             List<OVXNetworkManager> completedMngrs = new ArrayList<OVXNetworkManager>();

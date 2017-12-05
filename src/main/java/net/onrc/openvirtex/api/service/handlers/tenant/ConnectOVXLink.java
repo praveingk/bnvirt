@@ -78,23 +78,10 @@ public class ConnectOVXLink extends ApiHandler<Map<String, Object>> {
             HandlerUtils.isValidOVXPort(tenantId.intValue(),
                     dstDpid.longValue(), dstPort.shortValue());
 
-            //System.out.println("Got here");
             final OVXMap map = OVXMap.getInstance();
             final OVXNetwork virtualNetwork = map.getVirtualNetwork(tenantId
                     .intValue());
 
-            //PhysicalNetwork myNet = PhysicalNetwork.getInstance();
-            //myNet.initializeLoopPorts();
-//            if (LoopNetwork.IsLoop(srcDpid.longValue(), srcPort.shortValue(),
-//                    dstDpid.longValue(), dstPort.shortValue())) {
-//                System.out.println("This is a loop port pair.. Lazy link Creation now");
-//                PhysicalNetwork myNet = PhysicalNetwork.getInstance();
-//                PhysicalPort sPort = myNet.getSwitch(srcDpid.longValue()).getPort(srcPort.shortValue());
-//                PhysicalPort dPort = myNet.getSwitch(dstDpid.longValue()).getPort(dstPort.shortValue());
-//                System.out.println("Creating Link now ");
-//                myNet.createLink(sPort,dPort);
-//
-//            }
             final OVXLink virtualLink = virtualNetwork.connectLink(
                     srcDpid.longValue(), srcPort.shortValue(),
                     dstDpid.longValue(), dstPort.shortValue(), alg,
@@ -102,7 +89,6 @@ public class ConnectOVXLink extends ApiHandler<Map<String, Object>> {
 
 
             if (virtualLink == null) {
-                System.out.println("Virtual Link is null.. Probably not supposed to create this link..");
                 resp = new JSONRPC2Response(
                         new JSONRPC2Error(
                                 JSONRPC2Error.INTERNAL_ERROR.getCode(),
@@ -112,9 +98,9 @@ public class ConnectOVXLink extends ApiHandler<Map<String, Object>> {
                         "Created bi-directional virtual link {} between ports {}/{} - {}/{} in virtual network {}",
                         virtualLink.getLinkId(), virtualLink.getSrcSwitch()
                                 .getSwitchName(), virtualLink.getSrcPort()
-                                .getPortNumber(), virtualLink.getDstSwitch()
+                                .getPortNo(), virtualLink.getDstSwitch()
                                 .getSwitchName(), virtualLink.getDstPort()
-                                .getPortNumber(), virtualNetwork.getTenantId());
+                                .getPortNo(), virtualNetwork.getTenantId());
                 Map<String, Object> reply = new HashMap<String, Object>(
                         virtualLink.getDBObject());
                 reply.put(TenantHandler.TENANT, virtualLink.getTenantId());
@@ -150,7 +136,6 @@ public class ConnectOVXLink extends ApiHandler<Map<String, Object>> {
                             this.cmdName() + ": Invalid virtual switch id : "
                                     + e.getMessage()), 0);
         } catch (final MappingException e) {
-            e.printStackTrace();
             resp = new JSONRPC2Response(new JSONRPC2Error(
                     JSONRPC2Error.INVALID_PARAMS.getCode(), this.cmdName()
                             + ": " + e.getMessage()), 0);

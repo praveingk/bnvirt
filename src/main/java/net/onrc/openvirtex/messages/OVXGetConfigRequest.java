@@ -15,22 +15,10 @@
  ******************************************************************************/
 package net.onrc.openvirtex.messages;
 
-import net.onrc.openvirtex.elements.datapath.OVXSwitch;
 
-import org.openflow.protocol.OFGetConfigRequest;
+import org.projectfloodlight.openflow.protocol.OFGetConfigRequest;
 
-public class OVXGetConfigRequest extends OFGetConfigRequest implements
+public interface OVXGetConfigRequest extends OFGetConfigRequest,
         Devirtualizable {
-
-    @Override
-    public void devirtualize(final OVXSwitch sw) {
-        final OVXGetConfigReply reply = new OVXGetConfigReply();
-        reply.setMissSendLength(sw.getMissSendLen());
-
-        reply.setXid(this.getXid());
-
-        sw.sendMsg(reply, sw);
-
-    }
 
 }

@@ -113,8 +113,8 @@ public abstract class Link<T1 extends Port, T2 extends Switch> implements
     public String toString() {
         final String srcSwitch = this.getSrcSwitch().getSwitchName().toString();
         final String dstSwitch = this.getDstSwitch().getSwitchName().toString();
-        final short srcPort = this.srcPort.getPortNumber();
-        final short dstPort = this.dstPort.getPortNumber();
+        final short srcPort = this.srcPort.getPortNo().getShortPortNumber();
+        final short dstPort = this.dstPort.getPortNo().getShortPortNumber();
         return srcSwitch + "/" + srcPort + "-" + dstSwitch + "/" + dstPort;
     }
 
@@ -175,17 +175,17 @@ public abstract class Link<T1 extends Port, T2 extends Switch> implements
             // Throughput is expressed in Mbps.
             this.log.debug("Metric for link between {}-{},{}-{} is {}", this
                     .getSrcSwitch().getSwitchName(), this.srcPort
-                    .getPortNumber(), this.getDstSwitch().getSwitchName(),
-                    this.dstPort.getPortNumber(), 100000 / this.srcPort
+                    .getPortNo(), this.getDstSwitch().getSwitchName(),
+                    this.dstPort.getPortNo(), 100000 / this.srcPort
                             .getCurrentThroughput());
             return 100000 / this.srcPort.getCurrentThroughput();
         } else {
             this.log.warn(
                     "getMetric: ports have different throughput. Source: {}-{} = {}, Destination: {}-{} = {}",
                     this.getSrcSwitch().getSwitchName(), this.srcPort
-                            .getPortNumber(), this.srcPort
+                            .getPortNo(), this.srcPort
                             .getCurrentThroughput(), this.getDstSwitch()
-                            .getSwitchName(), this.dstPort.getPortNumber(),
+                            .getSwitchName(), this.dstPort.getPortNo(),
                     this.dstPort.getCurrentThroughput());
             return 1000;
         }
@@ -211,10 +211,10 @@ public abstract class Link<T1 extends Port, T2 extends Switch> implements
         Map<String, Object> dbObject = new HashMap<String, Object>();
         dbObject.put(TenantHandler.SRC_DPID, this.srcPort.getParentSwitch()
                 .getSwitchId());
-        dbObject.put(TenantHandler.SRC_PORT, this.srcPort.getPortNumber());
+        dbObject.put(TenantHandler.SRC_PORT, this.srcPort.getPortNo());
         dbObject.put(TenantHandler.DST_DPID, this.dstPort.getParentSwitch()
                 .getSwitchId());
-        dbObject.put(TenantHandler.DST_PORT, this.dstPort.getPortNumber());
+        dbObject.put(TenantHandler.DST_PORT, this.dstPort.getPortNo());
         return dbObject;
     }
 }

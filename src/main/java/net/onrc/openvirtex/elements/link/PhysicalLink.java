@@ -79,9 +79,9 @@ public class PhysicalLink extends Link<PhysicalPort, PhysicalSwitch> implements
     @Override
     public int compareTo(PhysicalLink o) {
         Long sum1 = this.getSrcSwitch().getSwitchId()
-                + this.getSrcPort().getPortNumber();
+                + this.getSrcPort().getPortNo().getPortNumber();
         Long sum2 = o.getSrcSwitch().getSwitchId()
-                + o.getSrcPort().getPortNumber();
+                + o.getSrcPort().getPortNo().getPortNumber();
         if (sum1 == sum2) {
             return (int) (this.getSrcSwitch().getSwitchId() - o.getSrcSwitch()
                     .getSwitchId());

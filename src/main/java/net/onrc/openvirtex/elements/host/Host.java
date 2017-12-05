@@ -129,7 +129,7 @@ public class Host implements Persistable {
         Map<String, Object> dbObject = new HashMap<String, Object>();
         dbObject.put(TenantHandler.VDPID, this.port.getParentSwitch()
                 .getSwitchId());
-        dbObject.put(TenantHandler.VPORT, this.port.getPortNumber());
+        dbObject.put(TenantHandler.VPORT, this.port.getPortNo());
         dbObject.put(TenantHandler.MAC, this.mac.toLong());
         dbObject.put(TenantHandler.HOST, this.hostId);
         return dbObject;

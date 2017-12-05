@@ -30,13 +30,18 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.RejectedExecutionException;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import net.onrc.openvirtex.core.OVXFactoryInst;
 import net.onrc.openvirtex.core.OpenVirteXController;
 import net.onrc.openvirtex.elements.datapath.PhysicalSwitch;
 import net.onrc.openvirtex.elements.network.PhysicalNetwork;
 import net.onrc.openvirtex.exceptions.HandshakeTimeoutException;
+import net.onrc.openvirtex.exceptions.SwitchMappingException;
 import net.onrc.openvirtex.exceptions.SwitchStateException;
+import net.onrc.openvirtex.messages.OVXFactory;
 import net.onrc.openvirtex.messages.OVXSetConfig;
-import net.onrc.openvirtex.messages.statistics.OVXDescriptionStatistics;
+import net.onrc.openvirtex.messages.ver10.OVXSetConfigVer10;
 import net.onrc.openvirtex.packet.OVXLLDP;
 
 import org.apache.logging.log4j.LogManager;
@@ -50,33 +55,13 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.timeout.IdleStateEvent;
 import org.jboss.netty.handler.timeout.ReadTimeoutException;
-import org.openflow.protocol.OFBarrierReply;
-import org.openflow.protocol.OFBarrierRequest;
-import org.openflow.protocol.OFEchoReply;
-import org.openflow.protocol.OFEchoRequest;
-import org.openflow.protocol.OFError;
-import org.openflow.protocol.OFFeaturesReply;
-import org.openflow.protocol.OFFlowMod;
-import org.openflow.protocol.OFFlowRemoved;
-import org.openflow.protocol.OFGetConfigReply;
-import org.openflow.protocol.OFGetConfigRequest;
-import org.openflow.protocol.OFHello;
-import org.openflow.protocol.OFMatch;
-import org.openflow.protocol.OFMessage;
-import org.openflow.protocol.OFPacketIn;
-import org.openflow.protocol.OFPortStatus;
-import org.openflow.protocol.OFQueueGetConfigReply;
-import org.openflow.protocol.OFSetConfig;
-import org.openflow.protocol.OFStatisticsReply;
-import org.openflow.protocol.OFStatisticsRequest;
-import org.openflow.protocol.OFSwitchConfig;
-import org.openflow.protocol.OFType;
-import org.openflow.protocol.OFVendor;
-import org.openflow.protocol.factory.BasicFactory;
-import org.openflow.protocol.factory.MessageParseException;
-import org.openflow.protocol.statistics.OFStatistics;
-import org.openflow.protocol.statistics.OFStatisticsType;
-import org.openflow.util.HexString;
+import org.projectfloodlight.openflow.exceptions.OFParseError;
+import org.projectfloodlight.openflow.protocol.*;
+import org.projectfloodlight.openflow.protocol.action.OFActionOutput;
+import org.projectfloodlight.openflow.protocol.match.Match;
+import org.projectfloodlight.openflow.types.OFGroup;
+import org.projectfloodlight.openflow.types.U64;
+import org.projectfloodlight.openflow.util.HexString;
 
 public class SwitchChannelHandler extends OFChannelHandler {
 
@@ -94,7 +79,7 @@ public class SwitchChannelHandler extends OFChannelHandler {
         INIT(false) {
 
             @Override
-            void processOFError(final SwitchChannelHandler h, final OFError m)
+            void processOFErrorMsg(final SwitchChannelHandler h, final OFErrorMsg m)
                     throws IOException {
                 // no need to actually implement
                 // because it won't happen because nothing
@@ -119,9 +104,9 @@ public class SwitchChannelHandler extends OFChannelHandler {
             }
 
             @Override
-            void processOFError(final SwitchChannelHandler h, final OFError m) {
+            void processOFErrorMsg(final SwitchChannelHandler h, final OFErrorMsg m) {
                 h.log.error("Error waiting for Hello (type:{}, code:{})",
-                        m.getErrorType(), m.getErrorCode());
+                        m.getErrType(), m.getData());
 
                 h.channel.disconnect();
             }
@@ -143,11 +128,11 @@ public class SwitchChannelHandler extends OFChannelHandler {
             }
 
             @Override
-            void processOFError(final SwitchChannelHandler h, final OFError m)
+            void processOFErrorMsg(final SwitchChannelHandler h, final OFErrorMsg m)
                     throws IOException {
                 h.log.error(
                         "Error waiting for config reply (type:{}, code:{})",
-                        m.getErrorType(), m.getErrorCode());
+                        m.getErrType(), m.getData());
                 h.channel.disconnect();
             }
 
@@ -162,37 +147,37 @@ public class SwitchChannelHandler extends OFChannelHandler {
             @Override
             void processOFGetConfigReply(final SwitchChannelHandler h,
                     final OFGetConfigReply m) throws IOException {
-                if (m.getMissSendLength() != (short) 0xffff) {
+                if (m.getMissSendLen() != (short) 0xffff) {
                     h.log.error(
                             "Miss send length was not set properly by switch {}",
                             h.featuresReply.getDatapathId());
                 }
-                h.sendHandshakeDescriptionStatsRequest();
-                h.setState(WAIT_DESCRIPTION_STAT_REPLY);
+                if (OVXFactoryInst.ofversion == 10) {
+                    h.sendHandshakeDescriptionStatsRequest();
+                    h.setState(WAIT_DESCRIPTION_STAT_REPLY);
+                } else if (OVXFactoryInst.ofversion == 13) {
+                    h.sendHandshakePortDescRequest();
+                    h.setState(WAIT_PORT_STAT_REPLY);
+                }
+
             }
 
             @Override
-            void processOFError(final SwitchChannelHandler h, final OFError m) {
-                try {
-                    if (m.getOffendingMsg().getType() != OFType.BARRIER_REQUEST) {
-                        h.log.error(
-                                "Error waiting for features (type:{}, code:{})",
-                                m.getErrorType(), m.getErrorCode());
-                        if (h.channel.isOpen()) {
-                            h.channel.close();
-                        }
-                    } else {
-                        h.log.warn(
-                                "Barrier Request message not understood by switch {}; "
-                                        + "if it's an HP switch you are probably ok.",
-                                        HexString.toHexString(h.featuresReply
-                                                .getDatapathId()));
-                    }
-
-                } catch (MessageParseException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
+            void processOFErrorMsg(final SwitchChannelHandler h, final OFErrorMsg m) {
+                if (m.getType() != OFType.BARRIER_REQUEST) {
+				    h.log.error(
+				            "Error waiting for features (type:{}, code:{})",
+				            m.getErrType(), m.getData());
+				    if (h.channel.isOpen()) {
+				        h.channel.close();
+				    }
+				} else {
+				    h.log.warn(
+				            "Barrier Request message not understood by switch {}; "
+				                    + "if it's an HP switch you are probably ok.",
+				                    HexString.toHexString(h.featuresReply
+				                            .getDatapathId().getBytes()));
+				}
             }
 
             @Override
@@ -202,30 +187,90 @@ public class SwitchChannelHandler extends OFChannelHandler {
 
             }
         },
+        WAIT_PORT_STAT_REPLY(false) {
+
+            @Override
+            void processOFStatsReply(final SwitchChannelHandler h,
+                                     final OFStatsReply m) throws SwitchMappingException {
+                h.portDescStatsReply = (OFPortDescStatsReply)m;
+                h.sendHandshakeDescriptionStatsRequest();
+                //h.sendHandshakeTableDescStatsRequest();
+                h.setState(WAIT_DESCRIPTION_STAT_REPLY);
+            }
+            @Override
+            void processOFErrorMsg(SwitchChannelHandler h, OFErrorMsg m) throws IOException {
+                h.log.error(
+                        "Error waiting for desc stats reply (type:{}, code:{})",
+                        m.getErrType(), m.getData());
+                h.channel.disconnect();
+            }
+
+            @Override
+            void processOFPortStatus(SwitchChannelHandler h, OFPortStatus m) throws IOException {
+                h.pendingPortStatusMsg.add(m);
+
+            }
+        },
+        WAIT_TABLE_STAT_REPLY(false) {
+
+            @Override
+            void processOFStatsReply(final SwitchChannelHandler h,
+                                     final OFStatsReply m) throws SwitchMappingException {
+                h.tableDescStatsReply = (OFTableFeaturesStatsReply)m;
+                h.sendHandshakeDescriptionStatsRequest();
+                h.setState(WAIT_DESCRIPTION_STAT_REPLY);
+            }
+            @Override
+            void processOFErrorMsg(SwitchChannelHandler h, OFErrorMsg m) throws IOException {
+                h.log.error(
+                        "Error waiting for desc stats reply (type:{}, code:{})",
+                        m.getErrType(), m.getData());
+                h.channel.disconnect();
+            }
+
+            @Override
+            void processOFPortStatus(SwitchChannelHandler h, OFPortStatus m) throws IOException {
+                h.pendingPortStatusMsg.add(m);
+
+            }
+        },
         WAIT_DESCRIPTION_STAT_REPLY(false) {
 
             @Override
-            void processOFStatisticsReply(final SwitchChannelHandler h,
-                    final OFStatisticsReply m) {
+            void processOFStatsReply(final SwitchChannelHandler h,
+                    final OFStatsReply m) throws SwitchMappingException {
                 // Read description, if it has been updated
-                final OVXDescriptionStatistics description = new OVXDescriptionStatistics();
-                final ChannelBuffer data = ChannelBuffers.buffer(description
-                        .getLength());
-                final OFStatistics f = m.getFirstStatistics();
-                f.writeTo(data);
-                description.readFrom(data);
-                OFFlowMod fm = new OFFlowMod();
-                fm.setCommand(OFFlowMod.OFPFC_DELETE);
-                fm.setMatch(new OFMatch());
-                h.channel.write(Collections.singletonList(fm));
-                h.sw = new PhysicalSwitch(h.featuresReply.getDatapathId());
+                OFFlowDelete fm = null;
+                OFGroupDelete gd = null;
+                if (OVXFactoryInst.ofversion == 10) {
+                    fm = OVXFactoryInst.myFactory.buildFlowDelete()
+                            .setMatch(OVXFactoryInst.myFactory.buildMatchV1().build())
+                            .setMatch(OVXFactoryInst.myFactory.buildMatchV1().build())
+                            .build();
+                    h.channel.write(Collections.singletonList(fm));
+                } else if (OVXFactoryInst.ofversion == 13) {
+                    h.sendHandshakeRoleRequest();
+                    fm = OVXFactoryInst.myFactory.buildFlowDelete()
+                            .setMatch(OVXFactoryInst.myFactory.buildMatchV3().build())
+                            .setMatch(OVXFactoryInst.myFactory.buildMatchV3().build())
+                            .build();
+                    h.channel.write(Collections.singletonList(fm));
+                    gd = OVXFactoryInst.myFactory.buildGroupDelete().setGroup(OFGroup.ALL).setGroupType(OFGroupType.ALL).setBuckets(ImmutableList.<OFBucket>of()).build();
+                    h.channel.write(Collections.singletonList(gd));
+                }
+
+          
+
+                h.sw = new PhysicalSwitch(h.featuresReply.getDatapathId().getLong());
                 // set switch information
                 // set features reply and channel first so we have a DPID and
                 // channel info.
                 h.sw.setFeaturesReply(h.featuresReply);
-                h.sw.setDescriptionStats(description);
+                h.sw.setDescriptionStats((OFDescStatsReply)m);
+                h.sw.setPortDescStatsReply(h.portDescStatsReply);
                 h.sw.setConnected(true);
                 h.sw.setChannel(h.channel);
+                h.sw.setOfversion(OVXFactoryInst.ofversion);
 
                 for (final OFPortStatus ps : h.pendingPortStatusMsg) {
                     this.handlePortStatusMessage(h, ps);
@@ -236,11 +281,11 @@ public class SwitchChannelHandler extends OFChannelHandler {
             }
 
             @Override
-            void processOFError(final SwitchChannelHandler h, final OFError m)
+            void processOFErrorMsg(final SwitchChannelHandler h, final OFErrorMsg m)
                     throws IOException {
                 h.log.error(
                         "Error waiting for desc stats reply (type:{}, code:{})",
-                        m.getErrorType(), m.getErrorCode());
+                        m.getErrType(), m.getData());
                 h.channel.disconnect();
 
             }
@@ -257,6 +302,8 @@ public class SwitchChannelHandler extends OFChannelHandler {
             @Override
             void processOFMessage(final SwitchChannelHandler h,
                     final OFMessage m) throws IOException {
+
+                System.out.println("Processing OF Message :"+ m.toString());
 
                 switch (m.getType()) {
                 case ECHO_REQUEST:
@@ -280,8 +327,13 @@ public class SwitchChannelHandler extends OFChannelHandler {
                 case PORT_STATUS:
                 case QUEUE_GET_CONFIG_REPLY:
                 case STATS_REPLY:
-                case VENDOR:
-                    h.sw.handleIO(m, h.channel);
+                case EXPERIMENTER:
+                    try {
+						h.sw.handleIO(m, h.channel);
+					} catch (SwitchMappingException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
                     break;
                     // The following messages are sent to switches. The controller
                     // should never receive them
@@ -303,7 +355,7 @@ public class SwitchChannelHandler extends OFChannelHandler {
             }
 
             @Override
-            void processOFError(final SwitchChannelHandler h, final OFError m)
+            void processOFErrorMsg(final SwitchChannelHandler h, final OFErrorMsg m)
                     throws IOException {
                 // should never happen
 
@@ -349,6 +401,8 @@ public class SwitchChannelHandler extends OFChannelHandler {
                     + ", details: %s", h.getSwitchInfoString(),
                     this.toString(), m.getType().toString(), details);
         }
+
+
 
         /**
          * We have an OFMessage we didn't expect given the current state and we
@@ -398,8 +452,6 @@ public class SwitchChannelHandler extends OFChannelHandler {
          *            The OFChannelHhandler that received the message
          * @param m
          *            The PortStatus message we received
-         * @param doNotify
-         *            if true switch port changed events will be dispatched
          */
         protected void handlePortStatusMessage(final SwitchChannelHandler h,
                 final OFPortStatus m) {
@@ -409,7 +461,12 @@ public class SwitchChannelHandler extends OFChannelHandler {
                                 + "happen");
                 throw new SwitchStateException(msg);
             }
-            h.sw.handleIO(m, h.channel);
+            try {
+				h.sw.handleIO(m, h.channel);
+			} catch (SwitchMappingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
         }
 
         /**
@@ -432,9 +489,10 @@ public class SwitchChannelHandler extends OFChannelHandler {
          *            The message we received.
          * @throws SwitchStateException
          * @throws IOException
+         * @throws SwitchMappingException 
          */
         void processOFMessage(final SwitchChannelHandler h, final OFMessage m)
-                throws IOException {
+                throws IOException, SwitchMappingException {
             switch (m.getType()) {
             case HELLO:
                 this.processOFHello(h, (OFHello) m);
@@ -449,7 +507,7 @@ public class SwitchChannelHandler extends OFChannelHandler {
                 this.processOFEchoRequest(h, (OFEchoRequest) m);
                 break;
             case ERROR:
-                this.processOFError(h, (OFError) m);
+                this.processOFErrorMsg(h, (OFErrorMsg) m);
                 break;
             case FEATURES_REPLY:
                 this.processOFFeaturesReply(h, (OFFeaturesReply) m);
@@ -470,10 +528,13 @@ public class SwitchChannelHandler extends OFChannelHandler {
                 this.processOFQueueGetConfigReply(h, (OFQueueGetConfigReply) m);
                 break;
             case STATS_REPLY:
-                this.processOFStatisticsReply(h, (OFStatisticsReply) m);
+                this.processOFStatsReply(h, (OFStatsReply) m);
                 break;
-            case VENDOR:
-                this.processOFVendor(h, (OFVendor) m);
+            case EXPERIMENTER:
+                this.processOFExperimenter(h, (OFExperimenter) m);
+                break;
+            case ROLE_REPLY:
+                this.procesOFRoleReply(h, (OFRoleReply) m);
                 break;
                 // The following messages are sent to switches. The controller
                 // should never receive them
@@ -491,6 +552,10 @@ public class SwitchChannelHandler extends OFChannelHandler {
             default:
                 break;
             }
+        }
+
+        void procesOFRoleReply(SwitchChannelHandler h, OFRoleReply m) {
+            //Do Nothing
         }
 
         /**
@@ -539,11 +604,10 @@ public class SwitchChannelHandler extends OFChannelHandler {
          */
         void processOFEchoRequest(final SwitchChannelHandler h,
                 final OFEchoRequest m) throws IOException {
-            final OFEchoReply reply = (OFEchoReply) BasicFactory.getInstance()
-                    .getMessage(OFType.ECHO_REPLY);
-            reply.setXid(m.getXid());
-            reply.setPayload(m.getPayload());
-            reply.setLengthU(m.getLengthU());
+            final OFEchoReply reply = OVXFactoryInst.myFactory.buildEchoReply()
+            		.setXid(m.getXid())
+            		.setData(m.getData())
+            		.build();
             h.channel.write(Collections.singletonList(reply));
         }
 
@@ -561,14 +625,14 @@ public class SwitchChannelHandler extends OFChannelHandler {
 
         /**
          * Processes OpenFlow error message. We don't have
-         * a default implementation for OFError, every state
+         * a default implementation for OFErrorMsg, every state
          * must override it.
          *
          * @param h the switch channel handler
          * @param m the error message
          * @throws IOException TODO
          */
-        abstract void processOFError(SwitchChannelHandler h, OFError m)
+        abstract void processOFErrorMsg(SwitchChannelHandler h, OFErrorMsg m)
                 throws IOException;
 
         /**
@@ -649,9 +713,10 @@ public class SwitchChannelHandler extends OFChannelHandler {
          * @param h the switch channel handler
          * @param m the statistics reply message
          * @throws IOException TODO
+         * @throws SwitchMappingException 
          */
-        void processOFStatisticsReply(final SwitchChannelHandler h,
-                final OFStatisticsReply m) throws IOException {
+        void processOFStatsReply(final SwitchChannelHandler h,
+                final OFStatsReply m) throws IOException, SwitchMappingException {
             this.unhandledMessageReceived(h, m);
         }
 
@@ -662,7 +727,7 @@ public class SwitchChannelHandler extends OFChannelHandler {
          * @param m the vendor message
          * @throws IOException TODO
          */
-        void processOFVendor(final SwitchChannelHandler h, final OFVendor m)
+        void processOFExperimenter(final SwitchChannelHandler h, final OFExperimenter m)
                 throws IOException {
             this.unhandledMessageReceived(h, m);
         }
@@ -670,6 +735,8 @@ public class SwitchChannelHandler extends OFChannelHandler {
 
     private ChannelState state;
     private OFFeaturesReply featuresReply;
+    private OFPortDescStatsReply portDescStatsReply;
+    private OFTableFeaturesStatsReply tableDescStatsReply;
 
     /*
      * Transaction ids to use during initialization
@@ -709,7 +776,7 @@ public class SwitchChannelHandler extends OFChannelHandler {
             dpidString = "?";
         } else {
             dpidString = HexString.toHexString(this.featuresReply
-                    .getDatapathId());
+                    .getDatapathId().getBytes());
         }
         return String.format("DPID -> %s(%s)", dpidString, channelString);
     }
@@ -742,10 +809,22 @@ public class SwitchChannelHandler extends OFChannelHandler {
      */
 
     @Override
-    protected void sendHandShakeMessage(final OFType type) throws IOException {
-        final OFMessage m = BasicFactory.getInstance().getMessage(type);
-        m.setXid(this.handshakeTransactionIds--);
-        this.channel.write(Collections.singletonList(m));
+    protected OFMessage sendHandShakeMessage(final OFType type) throws IOException {
+       
+        OFMessage m = null;
+   	 
+        if(type == OFType.HELLO)
+        {
+        	m=(OFMessage) OVXFactoryInst.myFactory.buildHello().setXid(this.handshakeTransactionIds--).build();
+        	this.channel.write(Collections.singletonList(m));
+        }
+        else if(type == OFType.FEATURES_REQUEST)
+        {
+        	m=(OFMessage) OVXFactoryInst.myFactory.buildFeaturesRequest().setXid(this.handshakeTransactionIds--).build();
+        	this.channel.write(Collections.singletonList(m));
+        }
+        
+        return m;
     }
 
     /**
@@ -758,41 +837,68 @@ public class SwitchChannelHandler extends OFChannelHandler {
 
         // Ensure we receive the full packet via PacketIn
 
-        final OFSetConfig configSet = (OFSetConfig) BasicFactory.getInstance()
-                .getMessage(OFType.SET_CONFIG);
-        configSet.setMissSendLength(OVXSetConfig.MSL_FULL).setLengthU(
-                OFSwitchConfig.MINIMUM_LENGTH);
-        configSet.setXid(this.handshakeTransactionIds--);
+        final OFSetConfig configSet = OVXFactoryInst.myFactory.buildSetConfig()
+        		.setMissSendLen(OVXSetConfigVer10.MSL_FULL)
+                .setXid(this.handshakeTransactionIds--)
+                .build();
         msglist.add(configSet);
 
         // Barrier
-        final OFBarrierRequest barrier = (OFBarrierRequest) BasicFactory
-                .getInstance().getMessage(OFType.BARRIER_REQUEST);
-        barrier.setXid(this.handshakeTransactionIds--);
+        final OFBarrierRequest barrier = OVXFactoryInst.myFactory.buildBarrierRequest()
+        		.setXid(this.handshakeTransactionIds--)
+        		.build();
         msglist.add(barrier);
 
         // Verify (need barrier?)
-        final OFGetConfigRequest configReq = (OFGetConfigRequest) BasicFactory
-                .getInstance().getMessage(OFType.GET_CONFIG_REQUEST);
-        configReq.setXid(this.handshakeTransactionIds--);
+        final OFGetConfigRequest configReq = OVXFactoryInst.myFactory.buildGetConfigRequest()
+        		.setXid(this.handshakeTransactionIds--)
+        		.build();
         msglist.add(configReq);
         this.channel.write(msglist);
     }
 
-    protected void sendHandshakeDescriptionStatsRequest() {
-        final OFStatisticsRequest req = new OFStatisticsRequest();
-        req.setStatisticType(OFStatisticsType.DESC);
-        req.setXid(this.handshakeTransactionIds--);
+    protected void sendHandshakePortDescRequest() {
+        final OFPortDescStatsRequest req = OVXFactoryInst.myFactory.buildPortDescStatsRequest()
+                .setXid(this.handshakeTransactionIds--)
+                .build();
 
         this.channel.write(Collections.singletonList(req));
 
     }
 
+    protected void sendHandshakeDescriptionStatsRequest() {
+        final OFDescStatsRequest req = OVXFactoryInst.myFactory.buildDescStatsRequest()
+        		.setXid(this.handshakeTransactionIds--)
+        		.build();
+
+        this.channel.write(Collections.singletonList(req));
+
+    }
+
+    protected void sendHandshakeTableDescStatsRequest() {
+        final OFTableFeaturesStatsRequest req = OVXFactoryInst.myFactory.buildTableFeaturesStatsRequest()
+                .setXid(this.handshakeTransactionIds--)
+                .setFlags(ImmutableSet.<OFStatsRequestFlags>of())
+                .setEntries(ImmutableList.<OFTableFeatures>of())
+                .build();
+
+        this.channel.write(Collections.singletonList(req));
+    }
+
+    protected void sendHandshakeRoleRequest() {
+        final OFRoleRequest req = OVXFactoryInst.myFactory.buildRoleRequest()
+                .setXid(this.handshakeTransactionIds--)
+                .setRole(OFControllerRole.ROLE_MASTER)
+                .setGenerationId(U64.ZERO)
+                .build();
+
+        this.channel.write(Collections.singletonList(req));
+
+    }
     @Override
     public void channelIdle(final ChannelHandlerContext ctx,
             final IdleStateEvent e) throws Exception {
-        final OFMessage m = BasicFactory.getInstance().getMessage(
-                OFType.ECHO_REQUEST);
+        final OFMessage m = OVXFactoryInst.myFactory.buildEchoRequest().build();
         e.getChannel().write(Collections.singletonList(m));
     }
 
@@ -807,13 +913,16 @@ public class SwitchChannelHandler extends OFChannelHandler {
          * This should be implemented with a token bucket in order to rate limit
          * the connections a little.
          */
-        if (e.getMessage() instanceof List) {
-            @SuppressWarnings("unchecked")
-            final List<OFMessage> msglist = (List<OFMessage>) e.getMessage();
+        if (e.getMessage() instanceof OFMessage) {
+            //@SuppressWarnings("unchecked")
+           // final List<OFMessage> msglist = (List<OFMessage>) e.getMessage();
 
-            for (final OFMessage ofm : msglist) {
-
-                try {
+           // for (final OFMessage ofm : msglist) {
+            System.out.println("***Ging to parse message");
+        	OFMessage ofm=(OFMessage) e.getMessage();
+            System.out.println("Inside Message received :"+ofm.toString() );
+        	
+//                try {
 
                     switch (ofm.getType()) {
                     case PACKET_IN:
@@ -821,7 +930,7 @@ public class SwitchChannelHandler extends OFChannelHandler {
                          * Is this packet a packet in? If yes is it an lldp?
                          * then send it to the PhysicalNetwork.
                          */
-                        final byte[] data = ((OFPacketIn) ofm).getPacketData();
+                        final byte[] data = ((OFPacketIn) ofm).getData();
                         if (OVXLLDP.isLLDP(data)) {
                             if (this.sw != null) {
                                 PhysicalNetwork.getInstance().handleLLDP(ofm,
@@ -837,13 +946,13 @@ public class SwitchChannelHandler extends OFChannelHandler {
                         break;
                     }
 
-                } catch (final Exception ex) {
-                    // We are the last handler in the stream, so run the
-                    // exception through the channel again by passing in
-                    // ctx.getChannel().
-                    Channels.fireExceptionCaught(ctx.getChannel(), ex);
-                }
-            }
+//                } catch (final Exception ex) {
+//                    // We are the last handler in the stream, so run the
+//                    // exception through the channel again by passing in
+//                    // ctx.getChannel().
+//                    Channels.fireExceptionCaught(ctx.getChannel(), ex);
+//                }
+            
 
         } else {
             Channels.fireExceptionCaught(this.channel, new AssertionError(
@@ -881,11 +990,11 @@ public class SwitchChannelHandler extends OFChannelHandler {
                     this.getSwitchInfoString());
 
             ctx.getChannel().close();
-        } else if (e.getCause() instanceof MessageParseException) {
+        } else if (e.getCause() instanceof OFParseError) {
             this.log.error(
                     "Disconnecting switch {} due to message parse failure",
                     this.getSwitchInfoString());
-
+            e.getCause().printStackTrace();
             ctx.getChannel().close();
         } else if (e.getCause() instanceof RejectedExecutionException) {
             this.log.error("Could not process message: queue full",
@@ -919,9 +1028,7 @@ public class SwitchChannelHandler extends OFChannelHandler {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
         return output.toString();
-
     }
     /*
      * Set the state for this channel

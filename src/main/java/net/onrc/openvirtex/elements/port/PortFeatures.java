@@ -15,8 +15,10 @@
  ******************************************************************************/
 package net.onrc.openvirtex.elements.port;
 
-import org.openflow.protocol.OFPhysicalPort.OFPortFeatures;
+import java.util.Set;
 
+import org.projectfloodlight.openflow.protocol.OFPortFeatures;
+import org.projectfloodlight.openflow.protocol.ver10.OFPortFeaturesSerializerVer10;
 /**
  * The Class PortFeatures. This class is useful to translate the port features
  * exposed by the port to sub-features, to simplify get/set operations
@@ -80,44 +82,46 @@ public class PortFeatures {
     /**
      * Instantiates a new port features.
      *
-     * @param features
+     * @param set
      *            the features
      */
-    public PortFeatures(final int features) {
-        if ((features & 1 << 0) != 0) {
+    public PortFeatures(final Set<OFPortFeatures> set) {
+    	
+    	
+        if (set.contains(OFPortFeatures.PF_10MB_HD)) {
             this.speed10MHD = true;
         }
-        if ((features & 1 << 1) != 0) {
+        if (set.contains(OFPortFeatures.PF_10MB_FD)) {
             this.speed10MFD = true;
         }
-        if ((features & 1 << 2) != 0) {
+        if (set.contains(OFPortFeatures.PF_100MB_HD)) {
             this.speed100MHD = true;
         }
-        if ((features & 1 << 3) != 0) {
+        if (set.contains(OFPortFeatures.PF_100MB_FD)) {
             this.speed100MFD = true;
         }
-        if ((features & 1 << 4) != 0) {
+        if (set.contains(OFPortFeatures.PF_1GB_HD)) {
             this.speed1GHD = true;
         }
-        if ((features & 1 << 5) != 0) {
+        if (set.contains(OFPortFeatures.PF_1GB_FD)) {
             this.speed1GFD = true;
         }
-        if ((features & 1 << 6) != 0) {
+        if (set.contains(OFPortFeatures.PF_10GB_FD)) {
             this.speed10GFD = true;
         }
-        if ((features & 1 << 7) != 0) {
+        if (set.contains(OFPortFeatures.PF_COPPER)) {
             this.copper = true;
         }
-        if ((features & 1 << 8) != 0) {
+        if (set.contains(OFPortFeatures.PF_FIBER)) {
             this.fiber = true;
         }
-        if ((features & 1 << 9) != 0) {
+        if (set.contains(OFPortFeatures.PF_AUTONEG)) {
             this.autonegotiation = true;
         }
-        if ((features & 1 << 10) != 0) {
+        if (set.contains(OFPortFeatures.PF_PAUSE)) {
             this.pause = true;
         }
-        if ((features & 1 << 11) != 0) {
+        if (set.contains(OFPortFeatures.PF_PAUSE_ASYM)) {
             this.pauseAsym = true;
         }
     }
@@ -125,7 +129,7 @@ public class PortFeatures {
     /**
      * Sets the current ovx port features.
      */
-    public void setCurrentOVXPortFeatures() {
+    public PortFeatures setCurrentOVXPortFeatures() {
         this.speed10MHD = false;
         this.speed10MFD = false;
         this.speed100MHD = false;
@@ -138,12 +142,13 @@ public class PortFeatures {
         this.autonegotiation = false;
         this.pause = false;
         this.pauseAsym = false;
+        return this;
     }
 
     /**
      * Sets the supported ovx port features.
      */
-    public void setSupportedOVXPortFeatures() {
+    public PortFeatures setSupportedOVXPortFeatures() {
         this.speed10MHD = true;
         this.speed10MFD = true;
         this.speed100MHD = true;
@@ -156,12 +161,13 @@ public class PortFeatures {
         this.autonegotiation = false;
         this.pause = false;
         this.pauseAsym = false;
+        return this;
     }
 
     /**
      * Sets the advertised ovx port features.
      */
-    public void setAdvertisedOVXPortFeatures() {
+    public PortFeatures setAdvertisedOVXPortFeatures() {
         this.speed10MHD = false;
         this.speed10MFD = true;
         this.speed100MHD = false;
@@ -174,12 +180,13 @@ public class PortFeatures {
         this.autonegotiation = false;
         this.pause = false;
         this.pauseAsym = false;
+        return this;
     }
 
     /**
      * Sets the peer ovx port features.
      */
-    public void setPeerOVXPortFeatures() {
+    public PortFeatures setPeerOVXPortFeatures() {
         this.speed10MHD = false;
         this.speed10MFD = false;
         this.speed100MHD = false;
@@ -192,6 +199,7 @@ public class PortFeatures {
         this.autonegotiation = false;
         this.pause = false;
         this.pauseAsym = false;
+        return this;
     }
 
     /**
@@ -202,40 +210,41 @@ public class PortFeatures {
     public Integer getOVXFeatures() {
         Integer features = 0;
         if (this.speed10MHD) {
-            features += OFPortFeatures.OFPPF_10MB_HD.getValue();
+            features +=  OFPortFeaturesSerializerVer10.PF_10MB_HD_VAL;
+           
         }
         if (this.speed10MFD) {
-            features += OFPortFeatures.OFPPF_10MB_FD.getValue();
+            features += OFPortFeaturesSerializerVer10.PF_10MB_FD_VAL;
         }
         if (this.speed100MHD) {
-            features += OFPortFeatures.OFPPF_100MB_HD.getValue();
+            features += OFPortFeaturesSerializerVer10.PF_100MB_HD_VAL;
         }
         if (this.speed100MFD) {
-            features += OFPortFeatures.OFPPF_100MB_FD.getValue();
+            features += OFPortFeaturesSerializerVer10.PF_100MB_FD_VAL;
         }
         if (this.speed1GHD) {
-            features += OFPortFeatures.OFPPF_1GB_HD.getValue();
+            features += OFPortFeaturesSerializerVer10.PF_1GB_HD_VAL;
         }
         if (this.speed1GFD) {
-            features += OFPortFeatures.OFPPF_1GB_FD.getValue();
+            features += OFPortFeaturesSerializerVer10.PF_1GB_FD_VAL;
         }
         if (this.speed10GFD) {
-            features += OFPortFeatures.OFPPF_10GB_FD.getValue();
+            features += OFPortFeaturesSerializerVer10.PF_10GB_FD_VAL;
         }
         if (this.copper) {
-            features += OFPortFeatures.OFPPF_COPPER.getValue();
+            features += OFPortFeaturesSerializerVer10.PF_COPPER_VAL;
         }
         if (this.fiber) {
-            features += OFPortFeatures.OFPPF_FIBER.getValue();
+            features += OFPortFeaturesSerializerVer10.PF_FIBER_VAL;
         }
         if (this.autonegotiation) {
-            features += OFPortFeatures.OFPPF_AUTONEG.getValue();
+            features += OFPortFeaturesSerializerVer10.PF_AUTONEG_VAL;
         }
         if (this.pause) {
-            features += OFPortFeatures.OFPPF_PAUSE.getValue();
+            features += OFPortFeaturesSerializerVer10.PF_PAUSE_VAL;
         }
         if (this.pauseAsym) {
-            features += OFPortFeatures.OFPPF_PAUSE_ASYM.getValue();
+            features += OFPortFeaturesSerializerVer10.PF_PAUSE_ASYM_VAL;
         }
         return features;
     }

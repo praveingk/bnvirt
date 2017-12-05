@@ -15,6 +15,7 @@
  ******************************************************************************/
 package net.onrc.openvirtex.exceptions;
 
+import net.onrc.openvirtex.elements.datapath.OVXSwitch;
 import net.onrc.openvirtex.elements.datapath.Switch;
 
 /**
@@ -26,7 +27,7 @@ public class SwitchMappingException extends MappingException {
 
     private static final long serialVersionUID = 798688L;
 
-    public SwitchMappingException() {
+    public SwitchMappingException(Integer tenantId, Integer port, Class<OVXSwitch> ovxSwitchClass) {
         super();
     }
 
@@ -37,11 +38,6 @@ public class SwitchMappingException extends MappingException {
     public SwitchMappingException(Integer key, Class value) {
         super(value.getName() + " not found for tenant with ID " + key);
     }
-
-    public SwitchMappingException(Integer key, Integer port,Class value) {
-        super(value.getName() + " not found for tenant with ID " + key + " and Port "+port);
-    }
-
 
     public SwitchMappingException(Switch key, Class value) {
         super(value.getName() + " not found for switch [" + key.getSwitchId()

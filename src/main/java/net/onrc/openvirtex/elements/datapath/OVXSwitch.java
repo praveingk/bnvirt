@@ -18,22 +18,25 @@ package net.onrc.openvirtex.elements.datapath;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Set;
 
 import net.onrc.openvirtex.api.service.handlers.TenantHandler;
+import net.onrc.openvirtex.core.OVXFactoryInst;
 import net.onrc.openvirtex.core.OpenVirteXController;
 import net.onrc.openvirtex.core.io.OVXSendMsg;
 import net.onrc.openvirtex.db.DBManager;
 import net.onrc.openvirtex.elements.Persistable;
 
-import java.util.Set;
 import java.util.TreeSet;
 
 import net.onrc.openvirtex.elements.datapath.role.RoleManager;
 import net.onrc.openvirtex.elements.datapath.role.RoleManager.Role;
+import net.onrc.openvirtex.elements.datapath.role.RoleManagerV3;
 import net.onrc.openvirtex.elements.host.Host;
 import net.onrc.openvirtex.elements.network.OVXNetwork;
 import net.onrc.openvirtex.elements.port.OVXPort;
@@ -53,16 +56,16 @@ import net.onrc.openvirtex.util.BitSetIndex.IndexType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jboss.netty.channel.Channel;
-import org.openflow.protocol.OFFeaturesReply;
-import org.openflow.protocol.OFMessage;
-import org.openflow.protocol.OFPhysicalPort;
-import org.openflow.protocol.OFPort;
-import org.openflow.protocol.OFVendor;
-import org.openflow.protocol.OFError.OFBadRequestCode;
-import org.openflow.util.LRULinkedHashMap;
-import org.openflow.vendor.nicira.OFNiciraVendorData;
-import org.openflow.vendor.nicira.OFRoleReplyVendorData;
-import org.openflow.vendor.nicira.OFRoleRequestVendorData;
+import org.projectfloodlight.openflow.protocol.*;
+import org.projectfloodlight.openflow.types.*;
+import org.projectfloodlight.openflow.protocol.errormsg.OFBadActionErrorMsg;
+import org.projectfloodlight.openflow.protocol.errormsg.OFBadRequestErrorMsg;
+import org.projectfloodlight.openflow.protocol.errormsg.OFFlowModFailedErrorMsg;
+import org.projectfloodlight.openflow.protocol.errormsg.OFHelloFailedErrorMsg;
+import org.projectfloodlight.openflow.protocol.errormsg.OFPortModFailedErrorMsg;
+import org.projectfloodlight.openflow.protocol.errormsg.OFQueueOpFailedErrorMsg;
+import org.projectfloodlight.openflow.protocol.ver10.OFNiciraControllerRoleSerializerVer10;
+import org.projectfloodlight.openflow.util.LRULinkedHashMap;
 
 /**
  * The base virtual switch.
@@ -76,7 +79,7 @@ public abstract class OVXSwitch extends Switch<OVXPort> implements Persistable {
      * Datapath description string.
      * TODO: should this be made specific per type of virtual switch?
      */
-    public static final String DPDESCSTRING = "NCL-Switch";
+    public static final String DPDESCSTRING = "OpenVirteX Virtual Switch";
     protected static int supportedActions = 0xFFF;
     protected static int bufferDimension = 4096;
     protected Integer tenantId = 0;
@@ -98,6 +101,7 @@ public abstract class OVXSwitch extends Switch<OVXPort> implements Persistable {
      * the current role of a controller.
      */
     private final RoleManager roleMan;
+    private final RoleManagerV3 roleManV3;
 
     /**
      * Instantiates a new OVX switch.
@@ -119,8 +123,9 @@ public abstract class OVXSwitch extends Switch<OVXPort> implements Persistable {
         this.bufferId = new AtomicInteger(1);
         this.flowTable = new OVXFlowTable(this);
         this.roleMan = new RoleManager();
+        roleManV3 = new RoleManagerV3();
         this.channelMux = new XidTranslator<Channel>();
-
+        System.out.println("Initialized OVXSwitch for "+ Long.toHexString(switchId)+", "+ tenantId);
     }
 
     /**
@@ -206,6 +211,7 @@ public abstract class OVXSwitch extends Switch<OVXPort> implements Persistable {
      * @throws IndexOutOfBoundException if no more port numbers are available
      */
     public short getNextPortNumber() throws IndexOutOfBoundException {
+        System.out.println("Getting next port no.");
         return this.portCounter.getNewIndex().shortValue();
     }
 
@@ -223,21 +229,33 @@ public abstract class OVXSwitch extends Switch<OVXPort> implements Persistable {
      *
      * @param ports the list of ports
      */
-    protected void addDefaultPort(final LinkedList<OFPhysicalPort> ports) {
-        final OFPhysicalPort port = new OFPhysicalPort();
-        port.setPortNumber(OFPort.OFPP_LOCAL.getValue());
-        port.setName("OpenFlow Local Port");
-        port.setConfig(1);
-        final byte[] addr = {(byte) 0xA4, (byte) 0x23, (byte) 0x05,
-                (byte) 0x00, (byte) 0x00, (byte) 0x00};
-        port.setHardwareAddress(addr);
-        port.setState(1);
-        port.setAdvertisedFeatures(0);
-        port.setCurrentFeatures(0);
-        port.setSupportedFeatures(0);
+    protected void addDefaultPort(final LinkedList<OFPortDesc> ports) {
+    	
+    	final short OFPP_LOCAL_SHORT = (short) 0xFFfe;
+    	Set<OFPortConfig> set_port_config=new HashSet<OFPortConfig>();
+    	set_port_config.add(OFPortConfig.PORT_DOWN);
+    	Set<OFPortState> set_port_state=new HashSet<OFPortState>();
+    	set_port_state.add(OFPortState.LINK_DOWN);
+    	Set<OFPortFeatures> set_port_adv_features=new HashSet<OFPortFeatures>();//O replaced by empty set
+    	Set<OFPortFeatures> set_port_curr_features=new HashSet<OFPortFeatures>();
+    	Set<OFPortFeatures> set_port_supp_features=new HashSet<OFPortFeatures>();
+    	
+    	final byte[] addr = {(byte) 0xA4, (byte) 0x23, (byte) 0x05,
+                 (byte) 0x00, (byte) 0x00, (byte) 0x00};
+    	
+        final OFPortDesc port = OVXFactoryInst.myFactory.buildPortDesc()
+        		.setPortNo(OFPort.ofShort(OFPP_LOCAL_SHORT))
+        		.setName("OF Local Port")
+        		.setConfig(set_port_config)
+        		.setHwAddr(MacAddress.of(addr))
+        		.setState(set_port_state)
+        		.setAdvertised(set_port_adv_features)
+        		.setCurr(set_port_curr_features)
+        		.setSupported(set_port_supp_features)
+        		.build();
+        		
         ports.add(port);
     }
-
     /**
      * Registers switch in the mapping and adds it to persistent storage.
      *
@@ -351,6 +369,7 @@ public abstract class OVXSwitch extends Switch<OVXPort> implements Persistable {
         this.isActive = false;
 
         roleMan.shutDown();
+        roleManV3.shutDown();
 
         cleanUpFlowMods(true);
         for (OVXPort p : getPorts().values()) {
@@ -361,23 +380,43 @@ public abstract class OVXSwitch extends Switch<OVXPort> implements Persistable {
 
     }
 
+    public List<OFPortDesc> getPortList() {
+        final LinkedList<OFPortDesc> portList = new LinkedList<OFPortDesc>();
+        for (final OVXPort ovxPort : this.portMap.values()) {
+            final OFPortDesc ofPort =OVXFactoryInst.myFactory.buildPortDesc()
+                    .setPortNo(ovxPort.getPortNo())
+                    .setName(ovxPort.getName())
+                    .setConfig(ovxPort.getConfig())
+                    .setHwAddr(ovxPort.getHwAddr())
+                    .setState(ovxPort.getState())
+                    .setAdvertised(ovxPort.getAdvertised())
+                    .setCurr(ovxPort.getCurr())
+                    .setSupported(ovxPort.getSupported())
+                    .build();
+
+            portList.add(ofPort);
+        }
+        return portList;
+    }
+
     /**
      * Generate features reply.
      */
     public void generateFeaturesReply() {
-        final OFFeaturesReply ofReply = new OFFeaturesReply();
-        ofReply.setDatapathId(this.switchId);
-        final LinkedList<OFPhysicalPort> portList = new LinkedList<OFPhysicalPort>();
+        
+        final LinkedList<OFPortDesc> portList = new LinkedList<OFPortDesc>();
         for (final OVXPort ovxPort : this.portMap.values()) {
-            final OFPhysicalPort ofPort = new OFPhysicalPort();
-            ofPort.setPortNumber(ovxPort.getPortNumber());
-            ofPort.setName(ovxPort.getName());
-            ofPort.setConfig(ovxPort.getConfig());
-            ofPort.setHardwareAddress(ovxPort.getHardwareAddress());
-            ofPort.setState(ovxPort.getState());
-            ofPort.setAdvertisedFeatures(ovxPort.getAdvertisedFeatures());
-            ofPort.setCurrentFeatures(ovxPort.getCurrentFeatures());
-            ofPort.setSupportedFeatures(ovxPort.getSupportedFeatures());
+            final OFPortDesc ofPort =OVXFactoryInst.myFactory.buildPortDesc()
+            		.setPortNo(ovxPort.getPortNo())
+            		.setName(ovxPort.getName())
+            		.setConfig(ovxPort.getConfig())
+            		.setHwAddr(ovxPort.getHwAddr())
+            		.setState(ovxPort.getState())
+            		.setAdvertised(ovxPort.getAdvertised())
+            		.setCurr(ovxPort.getCurr())
+            		.setSupported(ovxPort.getSupported())
+            		.build();
+            		
             portList.add(ofPort);
         }
 
@@ -389,14 +428,47 @@ public abstract class OVXSwitch extends Switch<OVXPort> implements Persistable {
          * interesting.
          */
         this.addDefaultPort(portList);
-        ofReply.setPorts(portList);
-        ofReply.setBuffers(OVXSwitch.bufferDimension);
-        ofReply.setTables((byte) 1);
-        ofReply.setCapabilities(this.capabilities.getOVXSwitchCapabilities());
-        ofReply.setActions(OVXSwitch.supportedActions);
-        ofReply.setXid(0);
-        ofReply.setLengthU(OFFeaturesReply.MINIMUM_LENGTH
-                + OFPhysicalPort.MINIMUM_LENGTH * portList.size());
+        
+        Set<OFActionType> supportedActions=new HashSet<OFActionType>(); //supportedActions = 0xFFF means adding all actions
+        supportedActions.add(OFActionType.OUTPUT);
+        supportedActions.add(OFActionType.SET_VLAN_VID);
+        supportedActions.add(OFActionType.SET_VLAN_PCP);
+        supportedActions.add(OFActionType.STRIP_VLAN);
+        supportedActions.add(OFActionType.SET_DL_SRC);
+        supportedActions.add(OFActionType.SET_DL_DST);
+        supportedActions.add(OFActionType.SET_NW_SRC);
+        supportedActions.add(OFActionType.SET_NW_DST);
+        supportedActions.add(OFActionType.SET_TP_SRC);
+        supportedActions.add(OFActionType.SET_TP_DST);
+        supportedActions.add(OFActionType.ENQUEUE);
+        supportedActions.add(OFActionType.EXPERIMENTER);
+    	
+        final OFFeaturesReply ofReply = OVXFactoryInst.myFactory.buildFeaturesReply()
+        		.setDatapathId(DatapathId.of(this.switchId))
+        		.setPorts(portList)
+        		.setNBuffers(OVXSwitch.bufferDimension)
+        		.setNTables((byte) 1)
+        		.setCapabilities(this.capabilities.getOVXSwitchCapabilities())
+        		.setActions(supportedActions)
+        		.setXid(0)
+        		.build();
+        		
+        this.setFeaturesReply(ofReply);
+    }
+
+    /**
+     * Generate features reply.
+     */
+    public void generateFeaturesReplyV3() {
+
+        final OFFeaturesReply ofReply = OVXFactoryInst.myFactory.buildFeaturesReply()
+                .setDatapathId(DatapathId.of(this.switchId))
+                .setAuxiliaryId(OFAuxId.MAIN)
+                .setNBuffers(OVXSwitch.bufferDimension)
+                .setNTables((byte) 1) //Currently 1 table
+                .setCapabilities(this.capabilities.getOVXSwitchCapabilitiesV3())
+                .setXid(0)
+                .build();
 
         this.setFeaturesReply(ofReply);
     }
@@ -408,18 +480,19 @@ public abstract class OVXSwitch extends Switch<OVXPort> implements Persistable {
      */
     @Override
     public boolean boot() {
-        this.generateFeaturesReply();
+        if (OVXFactoryInst.ofversion == 10) {
+            this.generateFeaturesReply();
+        } else if (OVXFactoryInst.ofversion == 13) {
+            this.generateFeaturesReplyV3();
+        }
         final OpenVirteXController ovxController = OpenVirteXController
                 .getInstance();
         ovxController.registerOVXSwitch(this);
         this.setActive(true);
         for (OVXPort p : getPorts().values()) {
-            //System.out.println("Pravein : Trying to boot up ports.. "+ p.getPortNumber() + ",phys "+p.getPhysicalPortNumber() +" isActive "+ p.isActive());
             if (p.isLink()) {
                 p.boot();
-                System.out.println("Pravein : Booted up ports.. "+ p.getPortNumber() +" isActive "+ p.isActive());
             }
-            //p.boot();
         }
         return true;
     }
@@ -448,7 +521,7 @@ public abstract class OVXSwitch extends Switch<OVXPort> implements Persistable {
     public synchronized int addToBufferMap(final OVXPacketIn pktIn) {
         // TODO: this isn't thread safe... fix it
         this.bufferId.compareAndSet(OVXSwitch.bufferDimension, 0);
-        this.bufferMap.put(this.bufferId.get(), new OVXPacketIn(pktIn));
+        this.bufferMap.put(this.bufferId.get(),OVXFactoryInst.myOVXFactory.buildOVXPacketIn(pktIn));
         return this.bufferId.getAndIncrement();
     }
 
@@ -509,16 +582,21 @@ public abstract class OVXSwitch extends Switch<OVXPort> implements Persistable {
      * OFMessage, net.onrc.openvirtex.core.io.OVXSendMsg)
      */
     @Override
-    public void sendMsg(final OFMessage msg, final OVXSendMsg from) {
-        XidPair<Channel> pair = channelMux.untranslate(msg.getXid());
+    public void sendMsg(OFMessage msg, final OVXSendMsg from) {
+        System.out.println("Sending msg");
+        XidPair<Channel> pair = channelMux.untranslate((int)msg.getXid());//converted Xid from long to int Check
         Channel c = null;
         if (pair != null) {
-            msg.setXid(pair.getXid());
+            msg=msg.createBuilder().setXid(pair.getXid()).build();
             c = pair.getSwitch();
         }
 
         if (this.isConnected && this.isActive) {
-            roleMan.sendMsg(msg, c);
+            if (OVXFactoryInst.ofversion == 10) {
+                roleMan.sendMsg(msg, c);
+            } else {
+                roleManV3.sendMsg(msg, c);
+            }
         } else {
             // TODO: we probably should install a drop rule here.
             log.warn(
@@ -536,40 +614,65 @@ public abstract class OVXSwitch extends Switch<OVXPort> implements Persistable {
      * .OFMessage)
      */
     @Override
-    public void handleIO(final OFMessage msg, Channel channel) {
+    public void handleIO(OFMessage msg, Channel channel) {
         /*
          * Save the channel the msg came in on
          */
-        msg.setXid(channelMux.translate(msg.getXid(), channel));
+        msg=this.setXidForHandleIO(msg,channelMux.translate((int)msg.getXid(), channel));
+       
+        
         try {
             /*
              * Check whether this channel (i.e., controller) is permitted to
              * send this msg to the dataplane
              */
-
-            if (this.roleMan.canSend(channel, msg)) {
-                ((Devirtualizable) msg).devirtualize(this);
+        	if (OVXFactoryInst.ofversion == 10) {
+                if (this.roleMan.canSend(channel, msg)) {
+                    ((Devirtualizable) msg).devirtualize(this);
+                } else {
+                    denyAccess(channel, msg, this.roleMan.getRole(channel));
+                }
             } else {
-                denyAccess(channel, msg, this.roleMan.getRole(channel));
+                if (this.roleManV3.canSend(channel, msg)) {
+                    ((Devirtualizable) msg).devirtualize(this);
+                } else {
+                    denyAccessV3(channel, msg, this.roleManV3.getRole(channel));
+                }
             }
         } catch (final ClassCastException e) {
             OVXSwitch.log.error("Received illegal message: " + msg);
+            System.out.println(e);
         }
     }
 
     @Override
-    public void handleRoleIO(OFVendor msg, Channel channel) {
+    public void handleRoleIO(OFExperimenter msg, Channel channel) {
 
         Role role = extractNiciraRoleRequest(channel, msg);
         try {
             this.roleMan.setRole(channel, role);
-            sendRoleReply(role, msg.getXid(), channel);
+            sendRoleReply(role, (int)msg.getXid(), channel);
             log.info("Finished handling role for {}",
                     channel.getRemoteAddress());
         } catch (IllegalArgumentException | UnknownRoleException ex) {
             log.warn(ex.getMessage());
         }
 
+    }
+
+    /* Below method for OpenFlow 1.3 */
+    public void handleRoleIOV3(OFRoleRequest msg, Channel channel) {
+        OFControllerRole role = msg.getRole();
+        System.out.println("Setting ovxswitch role "+ role.toString());
+        try {
+            this.roleManV3.setRole(channel, role);
+            System.out.println("Sending role reply "+ role.toString());
+            sendRoleReplyV3(role, this.roleManV3.getGenerationId(),(int)msg.getXid(), channel);
+            log.info("Finished handling role for {}",
+                    channel.getRemoteAddress());
+        } catch (IllegalArgumentException | UnknownRoleException ex) {
+        log.warn(ex.getMessage());
+    }
     }
 
     /**
@@ -591,6 +694,7 @@ public abstract class OVXSwitch extends Switch<OVXPort> implements Persistable {
      */
     public void setChannel(Channel channel) {
         this.roleMan.addController(channel);
+        this.roleManV3.addController(channel);
     }
 
     /**
@@ -600,6 +704,7 @@ public abstract class OVXSwitch extends Switch<OVXPort> implements Persistable {
      */
     public void removeChannel(Channel channel) {
         this.roleMan.removeChannel(channel);
+        this.roleManV3.removeChannel(channel);
     }
 
     /**
@@ -619,22 +724,21 @@ public abstract class OVXSwitch extends Switch<OVXPort> implements Persistable {
      * @param vendorMessage the vendor message
      * @return the role
      */
-    private Role extractNiciraRoleRequest(Channel chan, OFVendor vendorMessage) {
-        int vendor = vendorMessage.getVendor();
-        if (vendor != OFNiciraVendorData.NX_VENDOR_ID) {
+    private Role extractNiciraRoleRequest(Channel chan, OFExperimenter vendorMessage) {
+       
+        if (vendorMessage.getExperimenter() != 0x2320L ) { //Check whether it is Nicira
             return null;
         }
-        if (!(vendorMessage.getVendorData() instanceof OFRoleRequestVendorData)) {
+        if (((OFNiciraHeader)vendorMessage).getSubtype() != 0xaL) { // check whether it is Nicira Role Request
             return null;
         }
-        OFRoleRequestVendorData roleRequestVendorData = (OFRoleRequestVendorData) vendorMessage
-                .getVendorData();
-        Role role = Role.fromNxRole(roleRequestVendorData.getRole());
+        Role role=Role.fromNxRole(OFNiciraControllerRoleSerializerVer10.toWireValue((((OFNiciraControllerRoleRequest)vendorMessage).getRole())));
+        
         if (role == null) {
             String msg = String.format("Controller: [%s], State: [%s], "
                     + "received NX_ROLE_REPLY with invalid role " + "value %d",
                     chan.getRemoteAddress(), this.toString(),
-                    roleRequestVendorData.getRole());
+                    ((OFNiciraControllerRoleRequest)vendorMessage).getRole());
             throw new ControllerStateException(msg);
         }
         return role;
@@ -652,10 +756,25 @@ public abstract class OVXSwitch extends Switch<OVXPort> implements Persistable {
                 "Controller {} may not send message {} because role state is {}",
                 channel.getRemoteAddress(), m, role);
         OFMessage e = OVXMessageUtil.makeErrorMsg(
-                OFBadRequestCode.OFPBRC_EPERM, m);
+                OFBadRequestCode.EPERM, m);
         channel.write(Collections.singletonList(e));
     }
 
+    /**
+     * Denies access to controller because of role state for OpenFlow 1.3
+     *
+     * @param channel the channel
+     * @param m the message
+     * @param role the role
+     */
+    private void denyAccessV3(Channel channel, OFMessage m, OFControllerRole role) {
+        log.warn(
+                "Controller {} may not send message {} because role state is {}",
+                channel.getRemoteAddress(), m, role);
+        OFMessage e = OVXMessageUtil.makeErrorMsg(
+                OFBadRequestCode.EPERM, m);
+        channel.write(Collections.singletonList(e));
+    }
     /**
      * Sends a role reply.
      *
@@ -664,15 +783,23 @@ public abstract class OVXSwitch extends Switch<OVXPort> implements Persistable {
      * @param channel the channel on which to send
      */
     private void sendRoleReply(Role role, int xid, Channel channel) {
-        OFVendor vendor = new OFVendor();
-        vendor.setXid(xid);
-        vendor.setVendor(OFNiciraVendorData.NX_VENDOR_ID);
-        OFRoleReplyVendorData reply = new OFRoleReplyVendorData(role.toNxRole());
-        vendor.setVendorData(reply);
-        vendor.setLengthU(OFVendor.MINIMUM_LENGTH + reply.getLength());
-        channel.write(Collections.singletonList(vendor));
+        OFExperimenter experimenter = OVXFactoryInst.myFactory.buildNiciraControllerRoleReply()
+        		.setXid(xid)
+        		.setRole(OFNiciraControllerRoleSerializerVer10.ofWireValue((role.toNxRole())))
+        		.build();
+        		
+        channel.write(Collections.singletonList(experimenter));
     }
 
+    private void sendRoleReplyV3(OFControllerRole role, U64 generationId, int xid, Channel channel) {
+        OFRoleReply roleReply = OVXFactoryInst.myFactory.buildRoleReply()
+                .setXid(xid)
+                .setRole(role)
+                .setGenerationId(generationId)
+                .build();
+        System.out.println("Sent");
+        channel.write(Collections.singletonList(roleReply));
+    }
     /**
      * Generates a new XID for messages destined for the physical network.
      *
@@ -697,4 +824,208 @@ public abstract class OVXSwitch extends Switch<OVXPort> implements Persistable {
      */
     public abstract void sendSouth(OFMessage msg, OVXPort inPort);
 
+    public OFMessage setXidForHandleIO(OFMessage message,int xid)//TODO:temporary fix
+    {
+    	 OFMessage ovxmessage=null;
+         if(message!=null)
+         {
+             String class_name=message.getClass().getName();
+             String ovx_message_type=class_name.substring(class_name.lastIndexOf(".") + 1);
+
+             if(ovx_message_type.equals("OVXHelloVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXHello(xid);
+             else if(ovx_message_type.equals("OVXAggregateStatsReplyVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXAggregateStatsReply(xid,((OFAggregateStatsReply)message).getFlags(),((OFAggregateStatsReply)message).getPacketCount(), ((OFAggregateStatsReply)message).getByteCount(), ((OFAggregateStatsReply)message).getFlowCount());
+             else if(ovx_message_type.equals("OVXDescStatsReplyVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXDescStatsReply(xid,((OFDescStatsReply)message).getFlags(),((OFDescStatsReply)message).getMfrDesc(),((OFDescStatsReply)message).getHwDesc(),((OFDescStatsReply)message).getSwDesc(), ((OFDescStatsReply)message).getSerialNum(),((OFDescStatsReply)message).getDpDesc());
+             else if(ovx_message_type.equals("OVXFlowStatsReplyVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXFlowStatsReply(xid,((OFFlowStatsReply)message).getFlags(), ((OFFlowStatsReply)message).getEntries());
+             else if(ovx_message_type.equals("OVXPortStatsReplyVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXPortStatsReply(xid,((OFPortStatsReply)message).getFlags() , ((OFPortStatsReply)message).getEntries());
+             else if(ovx_message_type.equals("OVXQueueStatsReplyVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXQueueStatsReply(xid, ((OFQueueStatsReply)message).getFlags(), ((OFQueueStatsReply)message).getEntries());
+             else if(ovx_message_type.equals("OVXTableStatsReplyVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXTableStatsReply(xid,((OFTableStatsReply)message).getFlags() , ((OFTableStatsReply)message).getEntries());
+             else if(ovx_message_type.equals("OVXAggregateStatsRequestVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXAggregateStatsRequest(xid,((OFAggregateStatsRequest)message).getFlags(), ((OFAggregateStatsRequest)message).getMatch(),((OFAggregateStatsRequest)message).getTableId(),((OFAggregateStatsRequest)message).getOutPort());
+            else if(ovx_message_type.equals("OVXDescStatsRequestVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXDescStatsRequest(xid, ((OFDescStatsRequest)message).getFlags());
+             else if(ovx_message_type.equals("OVXFlowStatsRequestVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXFlowStatsRequest(xid, ((OFFlowStatsRequest)message).getFlags(), ((OFFlowStatsRequest)message).getMatch(), ((OFFlowStatsRequest)message).getTableId(), ((OFFlowStatsRequest)message).getOutPort());
+             else if(ovx_message_type.equals("OVXPortStatsRequestVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXPortStatsRequest(xid, ((OFPortStatsRequest)message).getFlags(), ((OFPortStatsRequest)message).getPortNo());
+             else if(ovx_message_type.equals("OVXQueueStatsRequestVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXQueueStatsRequest(xid,((OFQueueStatsRequest)message).getFlags(),((OFQueueStatsRequest)message).getPortNo(),((OFQueueStatsRequest)message).getQueueId());
+             else if(ovx_message_type.equals("OVXTableStatsRequestVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXTableStatsRequest(xid, ((OFTableStatsRequest)message).getFlags());
+             else if(ovx_message_type.equals("OVXBadActionErrorMsgVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXBadActionErrorMsg(xid,((OFBadActionErrorMsg)message).getCode(),((OFBadActionErrorMsg)message).getData());
+             else if(ovx_message_type.equals("OVXBadRequestErrorMsgVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXBadRequestErrorMsg(xid, ((OFBadRequestErrorMsg)message).getCode(), ((OFBadRequestErrorMsg)message).getData());
+             else if(ovx_message_type.equals("OVXFlowModFailedErrorMsgVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXFlowModFailedErrorMsg(xid,((OFFlowModFailedErrorMsg)message).getCode(), ((OFFlowModFailedErrorMsg)message).getData());
+             else if(ovx_message_type.equals("OVXHelloFailedErrorMsgVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXHelloFailedErrorMsg(xid,((OFHelloFailedErrorMsg)message).getCode(), ((OFHelloFailedErrorMsg)message).getData());
+             else if(ovx_message_type.equals("OVXPortModFailedErrorMsgVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXPortModFailedErrorMsg(xid,((OFPortModFailedErrorMsg)message).getCode(), ((OFPortModFailedErrorMsg)message).getData());
+             else if(ovx_message_type.equals("OVXQueueOpFailedErrorMsgVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXQueueOpFailedErrorMsg(xid,((OFQueueOpFailedErrorMsg)message).getCode(), ((OFQueueOpFailedErrorMsg)message).getData());
+             else if(ovx_message_type.equals("OVXBarrierReplyVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXBarrierReply(xid);
+             else if(ovx_message_type.equals("OVXBarrierRequestVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXBarrierRequest(xid);
+             else if(ovx_message_type.equals("OVXEchoReplyVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXEchoReply(xid, ((OFEchoReply)message).getData());
+             else if(ovx_message_type.equals("OVXEchoRequestVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXEchoRequest(xid, ((OFEchoRequest)message).getData());
+             else if(ovx_message_type.equals("OVXFeaturesReplyVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXFeaturesReply(xid, ((OFFeaturesReply)message).getDatapathId(),((OFFeaturesReply)message).getNBuffers(), ((OFFeaturesReply)message).getNTables(), ((OFFeaturesReply)message).getCapabilities(),  ((OFFeaturesReply)message).getActions(), ((OFFeaturesReply)message).getPorts());
+             else if(ovx_message_type.equals("OVXFeaturesRequestVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXFeaturesRequest(xid);
+             else if(ovx_message_type.equals("OVXFlowAddVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXFlowAdd(xid, ((OFFlowAdd)message).getMatch(),((OFFlowAdd)message).getCookie(), ((OFFlowAdd)message).getIdleTimeout(), ((OFFlowAdd)message).getHardTimeout(), ((OFFlowAdd)message).getPriority(), ((OFFlowAdd)message).getBufferId(), ((OFFlowAdd)message).getOutPort(), ((OFFlowAdd)message).getFlags(), ((OFFlowAdd)message).getActions());
+             else if(ovx_message_type.equals("OVXFlowDeleteVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXFlowDelete(xid, ((OFFlowDelete)message).getMatch(),((OFFlowDelete)message).getCookie(), ((OFFlowDelete)message).getIdleTimeout(), ((OFFlowDelete)message).getHardTimeout(), ((OFFlowDelete)message).getPriority(), ((OFFlowDelete)message).getBufferId(), ((OFFlowDelete)message).getOutPort(), ((OFFlowDelete)message).getFlags(), ((OFFlowDelete)message).getActions());
+             else if(ovx_message_type.equals("OVXFlowDeleteStrictVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXFlowDeleteStrict(xid, ((OFFlowDeleteStrict)message).getMatch(),((OFFlowDeleteStrict)message).getCookie(), ((OFFlowDeleteStrict)message).getIdleTimeout(), ((OFFlowDeleteStrict)message).getHardTimeout(), ((OFFlowDeleteStrict)message).getPriority(), ((OFFlowDeleteStrict)message).getBufferId(), ((OFFlowDeleteStrict)message).getOutPort(), ((OFFlowDeleteStrict)message).getFlags(), ((OFFlowDeleteStrict)message).getActions());
+             else if(ovx_message_type.equals("OVXFlowModifyVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXFlowModify(xid, ((OFFlowModify)message).getMatch(),((OFFlowModify)message).getCookie(), ((OFFlowModify)message).getIdleTimeout(), ((OFFlowModify)message).getHardTimeout(), ((OFFlowModify)message).getPriority(), ((OFFlowModify)message).getBufferId(), ((OFFlowModify)message).getOutPort(), ((OFFlowModify)message).getFlags(), ((OFFlowModify)message).getActions());
+             else if(ovx_message_type.equals("OVXFlowModifyStrictVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXFlowModifyStrict(xid, ((OFFlowModifyStrict)message).getMatch(),((OFFlowModifyStrict)message).getCookie(), ((OFFlowModifyStrict)message).getIdleTimeout(), ((OFFlowModifyStrict)message).getHardTimeout(), ((OFFlowModifyStrict)message).getPriority(), ((OFFlowModifyStrict)message).getBufferId(), ((OFFlowModifyStrict)message).getOutPort(), ((OFFlowModifyStrict)message).getFlags(), ((OFFlowModifyStrict)message).getActions());
+             else if(ovx_message_type.equals("OVXFlowRemovedVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXFlowRemoved(xid,((OFFlowRemoved)message).getMatch(), ((OFFlowRemoved)message).getCookie(), ((OFFlowRemoved)message).getPriority(), ((OFFlowRemoved)message).getReason(), ((OFFlowRemoved)message).getDurationSec(), ((OFFlowRemoved)message).getDurationNsec(), ((OFFlowRemoved)message).getIdleTimeout(), ((OFFlowRemoved)message).getPacketCount(), ((OFFlowRemoved)message).getByteCount());
+             else if(ovx_message_type.equals("OVXGetConfigReplyVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXGetConfigReply(xid,((OFGetConfigReply)message).getFlags(), ((OFGetConfigReply)message).getMissSendLen());
+             else if(ovx_message_type.equals("OVXGetConfigRequestVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXGetConfigRequest(xid);
+             else if(ovx_message_type.equals("OVXHelloVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXHello(xid);
+             else if(ovx_message_type.equals("OVXPacketInVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXPacketIn(xid,((OFPacketIn)message).getBufferId(), ((OFPacketIn)message).getTotalLen(),((OFPacketIn)message).getInPort(), ((OFPacketIn)message).getReason(), ((OFPacketIn)message).getData());
+             else if(ovx_message_type.equals("OVXPacketOutVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXPacketOut(xid,((OFPacketOut)message).getBufferId(),((OFPacketOut)message).getInPort(),((OFPacketOut)message).getActions(),((OFPacketOut)message).getData());
+             else if(ovx_message_type.equals("OVXPortModVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXPortMod(xid,((OFPortMod)message).getPortNo(),((OFPortMod)message).getHwAddr(), ((OFPortMod)message).getConfig(), ((OFPortMod)message).getMask(), ((OFPortMod)message).getAdvertise());
+             else if(ovx_message_type.equals("OVXPortStatusVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXPortStatus(xid,((OFPortStatus)message).getReason(), ((OFPortStatus)message).getDesc());
+             else if(ovx_message_type.equals("OVXQueueGetConfigReplyVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXQueueGetConfigReply(xid, ((OFQueueGetConfigReply)message).getPort(), ((OFQueueGetConfigReply)message).getQueues());
+             else if(ovx_message_type.equals("OVXQueueGetConfigRequestVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXQueueGetConfigRequest(xid,((OFQueueGetConfigRequest)message).getPort());
+             else if(ovx_message_type.equals("OVXSetConfigVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXSetConfig(xid, ((OFSetConfig)message).getFlags(), ((OFSetConfig)message).getMissSendLen());
+             else if(ovx_message_type.equals("OVXNiciraControllerRoleReplyVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXNiciraControllerRoleReply(xid,((OFNiciraControllerRoleReply)message).getRole());
+             else if(ovx_message_type.equals("OVXNiciraControllerRoleRequestVer10"))
+                ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXNiciraControllerRoleRequest(xid,((OFNiciraControllerRoleRequest)message).getRole());
+
+             /* OpenFlow 1.3 Support */
+             if(ovx_message_type.equals("OVXHelloVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXHello(((OFHello)message).getXid());
+             else if(ovx_message_type.equals("OVXAggregateStatsReplyVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXAggregateStatsReply(((OFAggregateStatsReply)message).getXid(),((OFAggregateStatsReply)message).getFlags(),((OFAggregateStatsReply)message).getPacketCount(), ((OFAggregateStatsReply)message).getByteCount(), ((OFAggregateStatsReply)message).getFlowCount());
+             else if(ovx_message_type.equals("OVXPortDescStatsReplyVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXPortDescStatsReply(((OFPortDescStatsReply)message).getXid(),((OFPortDescStatsReply)message).getFlags(),((OFPortDescStatsReply)message).getEntries());
+             else if(ovx_message_type.equals("OVXRoleReplyVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXRoleReply(((OFRoleReply)message).getXid(),((OFRoleReply)message).getRole(),((OFRoleReply)message).getGenerationId());
+             else if(ovx_message_type.equals("OVXDescStatsReplyVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXDescStatsReply(((OFDescStatsReply)message).getXid(),((OFDescStatsReply)message).getFlags(),((OFDescStatsReply)message).getMfrDesc(),((OFDescStatsReply)message).getHwDesc(),((OFDescStatsReply)message).getSwDesc(), ((OFDescStatsReply)message).getSerialNum(),((OFDescStatsReply)message).getDpDesc());
+             else if(ovx_message_type.equals("OVXFlowStatsReplyVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXFlowStatsReply(((OFFlowStatsReply)message).getXid(),((OFFlowStatsReply)message).getFlags(), ((OFFlowStatsReply)message).getEntries());
+             else if(ovx_message_type.equals("OVXPortStatsReplyVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXPortStatsReply(((OFPortStatsReply)message).getXid(),((OFPortStatsReply)message).getFlags() , ((OFPortStatsReply)message).getEntries());
+             else if(ovx_message_type.equals("OVXQueueStatsReplyVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXQueueStatsReply(((OFQueueStatsReply)message).getXid(), ((OFQueueStatsReply)message).getFlags(), ((OFQueueStatsReply)message).getEntries());
+             else if(ovx_message_type.equals("OVXTableStatsReplyVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXTableStatsReply(((OFTableStatsReply)message).getXid(),((OFTableStatsReply)message).getFlags() , ((OFTableStatsReply)message).getEntries());
+             else if(ovx_message_type.equals("OVXAggregateStatsRequestVer13"))
+                 ovxmessage= OVXFactoryInst.myOVXFactory.buildOVXAggregateStatsRequest(((OFAggregateStatsRequest)message).getXid(), ((OFAggregateStatsRequest)message).getFlags(), ((OFAggregateStatsRequest)message).getTableId(), ((OFAggregateStatsRequest)message).getOutPort(), ((OFAggregateStatsRequest)message).getOutGroup(), ((OFAggregateStatsRequest)message).getCookie(), ((OFAggregateStatsRequest)message).getCookieMask(), ((OFAggregateStatsRequest)message).getMatch());
+             else if(ovx_message_type.equals("OVXPortDescStatsRequestVer13"))
+                 ovxmessage = OVXFactoryInst.myOVXFactory.buildOVXPortDescStatsRequest(((OFPortDescStatsRequest) message).getXid(), ((OFPortDescStatsRequest) message).getFlags());
+             else if(ovx_message_type.equals("OVXRoleRequestVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXRoleRequest(((OFRoleRequest)message).getXid(),((OFRoleRequest)message).getRole(),((OFRoleRequest)message).getGenerationId());
+             else if(ovx_message_type.equals("OVXDescStatsRequestVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXDescStatsRequest(((OFDescStatsRequest)message).getXid(), ((OFDescStatsRequest)message).getFlags());
+             else if(ovx_message_type.equals("OVXFlowStatsRequestVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXFlowStatsRequest(((OFFlowStatsRequest)message).getXid(), ((OFFlowStatsRequest)message).getFlags(), ((OFFlowStatsRequest)message).getTableId(), ((OFFlowStatsRequest)message).getOutPort(), ((OFFlowStatsRequest)message).getOutGroup(), ((OFFlowStatsRequest)message).getCookie(), ((OFFlowStatsRequest)message).getCookieMask(), ((OFFlowStatsRequest)message).getMatch());
+             else if(ovx_message_type.equals("OVXPortStatsRequestVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXPortStatsRequest(((OFPortStatsRequest)message).getXid(), ((OFPortStatsRequest)message).getFlags(), ((OFPortStatsRequest)message).getPortNo());
+             else if(ovx_message_type.equals("OVXQueueStatsRequestVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXQueueStatsRequest(((OFQueueStatsRequest)message).getXid(),((OFQueueStatsRequest)message).getFlags(),((OFQueueStatsRequest)message).getPortNo(),((OFQueueStatsRequest)message).getQueueId());
+             else if(ovx_message_type.equals("OVXTableStatsRequestVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXTableStatsRequest(((OFTableStatsRequest)message).getXid(), ((OFTableStatsRequest)message).getFlags());
+             else if(ovx_message_type.equals("OVXBadActionErrorMsgVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXBadActionErrorMsg(((OFBadActionErrorMsg)message).getXid(),((OFBadActionErrorMsg)message).getCode(),((OFBadActionErrorMsg)message).getData());
+             else if(ovx_message_type.equals("OVXBadRequestErrorMsgVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXBadRequestErrorMsg(((OFBadRequestErrorMsg)message).getXid(), ((OFBadRequestErrorMsg)message).getCode(), ((OFBadRequestErrorMsg)message).getData());
+             else if(ovx_message_type.equals("OVXFlowModFailedErrorMsgVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXFlowModFailedErrorMsg(((OFFlowModFailedErrorMsg)message).getXid(),((OFFlowModFailedErrorMsg)message).getCode(), ((OFFlowModFailedErrorMsg)message).getData());
+             else if(ovx_message_type.equals("OVXHelloFailedErrorMsgVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXHelloFailedErrorMsg(((OFHelloFailedErrorMsg)message).getXid(),((OFHelloFailedErrorMsg)message).getCode(), ((OFHelloFailedErrorMsg)message).getData());
+             else if(ovx_message_type.equals("OVXPortModFailedErrorMsgVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXPortModFailedErrorMsg(((OFPortModFailedErrorMsg)message).getXid(),((OFPortModFailedErrorMsg)message).getCode(), ((OFPortModFailedErrorMsg)message).getData());
+             else if(ovx_message_type.equals("OVXQueueOpFailedErrorMsgVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXQueueOpFailedErrorMsg(((OFQueueOpFailedErrorMsg)message).getXid(),((OFQueueOpFailedErrorMsg)message).getCode(), ((OFQueueOpFailedErrorMsg)message).getData());
+             else if(ovx_message_type.equals("OVXBarrierReplyVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXBarrierReply(((OFBarrierReply)message).getXid());
+             else if(ovx_message_type.equals("OVXBarrierRequestVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXBarrierRequest(((OFBarrierRequest)message).getXid());
+             else if(ovx_message_type.equals("OVXEchoReplyVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXEchoReply(((OFEchoReply)message).getXid(), ((OFEchoReply)message).getData());
+             else if(ovx_message_type.equals("OVXEchoRequestVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXEchoRequest(((OFEchoRequest)message).getXid(), ((OFEchoRequest)message).getData());
+             else if(ovx_message_type.equals("OVXFeaturesReplyVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXFeaturesReply(((OFFeaturesReply)message).getXid(), ((OFFeaturesReply)message).getDatapathId(),((OFFeaturesReply)message).getNBuffers(), ((OFFeaturesReply)message).getNTables(),((OFFeaturesReply)message).getAuxiliaryId(), ((OFFeaturesReply)message).getCapabilities(), ((OFFeaturesReply)message).getReserved());
+             else if(ovx_message_type.equals("OVXFeaturesRequestVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXFeaturesRequest(((OFFeaturesRequest)message).getXid());
+             else if(ovx_message_type.equals("OVXFlowAddVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXFlowAdd(((OFFlowAdd)message).getXid(), ((OFFlowAdd)message).getCookie(), ((OFFlowAdd)message).getCookieMask(), ((OFFlowAdd)message).getTableId(), ((OFFlowAdd)message).getIdleTimeout(), ((OFFlowAdd)message).getHardTimeout(), ((OFFlowAdd)message).getPriority(), ((OFFlowAdd)message).getBufferId(), ((OFFlowAdd)message).getOutPort(), ((OFFlowAdd)message).getOutGroup(), ((OFFlowAdd)message).getFlags(), ((OFFlowAdd)message).getMatch(), ((OFFlowAdd)message).getInstructions());
+             else if(ovx_message_type.equals("OVXFlowDeleteVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXFlowDelete(((OFFlowDelete)message).getXid(), ((OFFlowDelete)message).getCookie(), ((OFFlowDelete)message).getCookieMask(), ((OFFlowDelete)message).getTableId(), ((OFFlowDelete)message).getIdleTimeout(), ((OFFlowDelete)message).getHardTimeout(), ((OFFlowDelete)message).getPriority(), ((OFFlowDelete)message).getBufferId(), ((OFFlowDelete)message).getOutPort(), ((OFFlowDelete)message).getOutGroup(), ((OFFlowDelete)message).getFlags(), ((OFFlowDelete)message).getMatch(), ((OFFlowDelete)message).getInstructions());
+             else if(ovx_message_type.equals("OVXFlowDeleteStrictVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXFlowDeleteStrict(((OFFlowDeleteStrict)message).getXid(), ((OFFlowDeleteStrict)message).getCookie(), ((OFFlowDeleteStrict)message).getCookieMask(), ((OFFlowDeleteStrict)message).getTableId(), ((OFFlowDeleteStrict)message).getIdleTimeout(), ((OFFlowDeleteStrict)message).getHardTimeout(), ((OFFlowDeleteStrict)message).getPriority(), ((OFFlowDeleteStrict)message).getBufferId(), ((OFFlowDeleteStrict)message).getOutPort(), ((OFFlowDeleteStrict)message).getOutGroup(), ((OFFlowDeleteStrict)message).getFlags(), ((OFFlowDeleteStrict)message).getMatch(), ((OFFlowDeleteStrict)message).getInstructions());
+             else if(ovx_message_type.equals("OVXFlowModifyVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXFlowModify(((OFFlowModify)message).getXid(), ((OFFlowModify)message).getCookie(), ((OFFlowModify)message).getCookieMask(), ((OFFlowModify)message).getTableId(), ((OFFlowModify)message).getIdleTimeout(), ((OFFlowModify)message).getHardTimeout(), ((OFFlowModify)message).getPriority(), ((OFFlowModify)message).getBufferId(), ((OFFlowModify)message).getOutPort(), ((OFFlowModify)message).getOutGroup(), ((OFFlowModify)message).getFlags(), ((OFFlowModify)message).getMatch(), ((OFFlowModify)message).getInstructions());
+             else if(ovx_message_type.equals("OVXFlowModifyStrictVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXFlowModifyStrict(((OFFlowModifyStrict)message).getXid(), ((OFFlowModifyStrict)message).getCookie(), ((OFFlowModifyStrict)message).getCookieMask(), ((OFFlowModifyStrict)message).getTableId(), ((OFFlowModifyStrict)message).getIdleTimeout(), ((OFFlowModifyStrict)message).getHardTimeout(), ((OFFlowModifyStrict)message).getPriority(), ((OFFlowModifyStrict)message).getBufferId(), ((OFFlowModifyStrict)message).getOutPort(), ((OFFlowModifyStrict)message).getOutGroup(), ((OFFlowModifyStrict)message).getFlags(), ((OFFlowModifyStrict)message).getMatch(), ((OFFlowModifyStrict)message).getInstructions());
+             else if(ovx_message_type.equals("OVXFlowRemovedVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXFlowRemoved(((OFFlowRemoved)message).getXid(), ((OFFlowRemoved)message).getCookie(), ((OFFlowRemoved)message).getPriority(), ((OFFlowRemoved)message).getReason(), ((OFFlowRemoved)message).getTableId(), ((OFFlowRemoved)message).getDurationSec(), ((OFFlowRemoved)message).getDurationNsec(), ((OFFlowRemoved)message).getIdleTimeout(), ((OFFlowRemoved)message).getHardTimeout(),((OFFlowRemoved)message).getPacketCount(), ((OFFlowRemoved)message).getByteCount(), ((OFFlowRemoved)message).getMatch());
+             else if(ovx_message_type.equals("OVXGetConfigReplyVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXGetConfigReply(((OFGetConfigReply)message).getXid(),((OFGetConfigReply)message).getFlags(), ((OFGetConfigReply)message).getMissSendLen());
+             else if(ovx_message_type.equals("OVXGetConfigRequestVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXGetConfigRequest(((OFGetConfigRequest)message).getXid());
+             else if(ovx_message_type.equals("OVXHelloVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXHello(((OFHello)message).getXid());
+             else if(ovx_message_type.equals("OVXPacketInVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXPacketIn(((OFPacketIn)message).getXid(),((OFPacketIn)message).getBufferId(), ((OFPacketIn)message).getTotalLen(),((OFPacketIn)message).getReason(), ((OFPacketIn)message).getTableId(), ((OFPacketIn)message).getCookie(), ((OFPacketIn)message).getMatch(), ((OFPacketIn)message).getData());
+             else if(ovx_message_type.equals("OVXPacketOutVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXPacketOut(((OFPacketOut)message).getXid(),((OFPacketOut)message).getBufferId(),((OFPacketOut)message).getInPort(),((OFPacketOut)message).getActions(),((OFPacketOut)message).getData());
+             else if(ovx_message_type.equals("OVXPortModVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXPortMod(((OFPortMod)message).getXid(),((OFPortMod)message).getPortNo(),((OFPortMod)message).getHwAddr(), ((OFPortMod)message).getConfig(), ((OFPortMod)message).getMask(), ((OFPortMod)message).getAdvertise());
+             else if(ovx_message_type.equals("OVXPortStatusVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXPortStatus(((OFPortStatus)message).getXid(),((OFPortStatus)message).getReason(), ((OFPortStatus)message).getDesc());
+             else if(ovx_message_type.equals("OVXQueueGetConfigReplyVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXQueueGetConfigReply(((OFQueueGetConfigReply)message).getXid(), ((OFQueueGetConfigReply)message).getPort(), ((OFQueueGetConfigReply)message).getQueues());
+             else if(ovx_message_type.equals("OVXQueueGetConfigRequestVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXQueueGetConfigRequest(((OFQueueGetConfigRequest)message).getXid(),((OFQueueGetConfigRequest)message).getPort());
+             else if(ovx_message_type.equals("OVXSetConfigVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXSetConfig(((OFSetConfig)message).getXid(), ((OFSetConfig)message).getFlags(), ((OFSetConfig)message).getMissSendLen());
+             else if(ovx_message_type.equals("OVXNiciraControllerRoleReplyVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXNiciraControllerRoleReply(((OFNiciraControllerRoleReply)message).getXid(),((OFNiciraControllerRoleReply)message).getRole());
+             else if(ovx_message_type.equals("OVXNiciraControllerRoleRequestVer13"))
+                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXNiciraControllerRoleRequest(((OFNiciraControllerRoleRequest)message).getXid(),((OFNiciraControllerRoleRequest)message).getRole());
+             else if(ovx_message_type.equals("OVXTableFeaturesStatsRequestVer13"))
+                 ovxmessage = OVXFactoryInst.myOVXFactory.buildOVXTableFeaturesStatsRequest(((OFTableFeaturesStatsRequest)message).getXid(),((OFTableFeaturesStatsRequest) message).getFlags(), ((OFTableFeaturesStatsRequest) message).getEntries());
+             else if(ovx_message_type.equals("OVXableFeaturesStatsReplyVer13"))
+                 ovxmessage = OVXFactoryInst.myOVXFactory.buildOVXTableFeaturesStatsReply(((OFTableFeaturesStatsReply)message).getXid(),((OFTableFeaturesStatsReply) message).getFlags(), ((OFTableFeaturesStatsReply) message).getEntries());
+
+             System.out.println("Ctrl : "+ ovx_message_type + " convert - "+ ovxmessage);
+
+         } else {
+             System.out.println("msg is null");
+         }
+         return ovxmessage;
+    }
+    
+    
 }

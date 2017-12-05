@@ -94,8 +94,8 @@ public class ConnectOVXRoute extends ApiHandler<Map<String, Object>> {
                 this.log.info(
                         "Created bi-directional virtual route {} between ports ({},{}) on virtual big-switch {} in virtual network {}",
                         virtualRoute.getRouteId(), virtualRoute.getSrcPort()
-                                .getPortNumber(), virtualRoute.getDstPort()
-                                .getPortNumber(), virtualRoute.getSrcSwitch()
+                                .getPortNo(), virtualRoute.getDstPort()
+                                .getPortNo(), virtualRoute.getSrcSwitch()
                                 .getSwitchName(), virtualNetwork.getTenantId());
                 Map<String, Object> reply = new HashMap<String, Object>(
                         virtualRoute.getDBObject());

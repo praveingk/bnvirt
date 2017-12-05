@@ -31,6 +31,7 @@ import net.onrc.openvirtex.exceptions.InvalidDPIDException;
 import net.onrc.openvirtex.exceptions.InvalidTenantIdException;
 import net.onrc.openvirtex.exceptions.MissingRequiredField;
 import net.onrc.openvirtex.exceptions.NetworkMappingException;
+import net.onrc.openvirtex.exceptions.SwitchMappingException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -48,7 +49,7 @@ public class CreateOVXSwitch extends ApiHandler<Map<String, Object>> {
     private Logger log = LogManager.getLogger(CreateOVXSwitch.class.getName());
 
     @Override
-    public JSONRPC2Response process(final Map<String, Object> params) {
+    public JSONRPC2Response process(final Map<String, Object> params) throws SwitchMappingException {
         JSONRPC2Response resp = null;
 
         try {
@@ -61,21 +62,15 @@ public class CreateOVXSwitch extends ApiHandler<Map<String, Object>> {
 
             HandlerUtils.isValidTenantId(tenantId.intValue());
 
-            System.out.println("Pravein: Creating a Virtual Switch: tenant:"+tenantId+" dpids:"+dpids.toString() +" VDPID: "+dp);
-
             final OVXMap map = OVXMap.getInstance();
             final OVXNetwork virtualNetwork = map.getVirtualNetwork(tenantId
                     .intValue());
             final List<Long> longDpids = new ArrayList<Long>();
-            System.out.println("Phys DPIDs:");
             for (final Number dpid : dpids) {
                 longDpids.add(dpid.longValue());
-                System.out.println(Long.toHexString(dpid.longValue()));
             }
 
-
             HandlerUtils.isValidDPID(tenantId.intValue(), longDpids);
-            System.out.println("Came here..");
             final OVXSwitch ovxSwitch;
             if (dp == 0) {
                 ovxSwitch = virtualNetwork.createSwitch(longDpids);

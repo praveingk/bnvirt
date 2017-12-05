@@ -16,7 +16,8 @@
 package net.onrc.openvirtex.messages;
 
 import net.onrc.openvirtex.elements.datapath.PhysicalSwitch;
+import net.onrc.openvirtex.exceptions.SwitchMappingException;
 
 public interface Virtualizable {
-    public void virtualize(PhysicalSwitch sw);
+    public void virtualize(PhysicalSwitch sw) throws SwitchMappingException;
 }

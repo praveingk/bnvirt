@@ -26,6 +26,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import net.onrc.openvirtex.core.OVXFactoryInst;
 import net.onrc.openvirtex.core.io.OVXSendMsg;
 import net.onrc.openvirtex.elements.datapath.DPIDandPort;
 import net.onrc.openvirtex.elements.datapath.PhysicalSwitch;
@@ -33,7 +34,7 @@ import net.onrc.openvirtex.elements.datapath.Switch;
 import net.onrc.openvirtex.elements.network.PhysicalNetwork;
 import net.onrc.openvirtex.elements.port.PhysicalPort;
 import net.onrc.openvirtex.exceptions.PortMappingException;
-import net.onrc.openvirtex.messages.OVXMessageFactory;
+import net.onrc.openvirtex.exceptions.SwitchMappingException;
 import net.onrc.openvirtex.messages.OVXPacketIn;
 import net.onrc.openvirtex.packet.Ethernet;
 import net.onrc.openvirtex.packet.OVXLLDP;
@@ -42,12 +43,13 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jboss.netty.util.Timeout;
 import org.jboss.netty.util.TimerTask;
-import org.openflow.protocol.OFMessage;
-import org.openflow.protocol.OFPacketOut;
-import org.openflow.protocol.OFType;
-import org.openflow.protocol.action.OFAction;
-import org.openflow.protocol.action.OFActionOutput;
-import org.openflow.protocol.action.OFActionType;
+import org.projectfloodlight.openflow.protocol.OFMessage;
+import org.projectfloodlight.openflow.protocol.OFPacketIn;
+import org.projectfloodlight.openflow.protocol.OFPacketOut;
+import org.projectfloodlight.openflow.protocol.action.OFAction;
+import org.projectfloodlight.openflow.protocol.action.OFActionOutput;
+import org.projectfloodlight.openflow.protocol.match.MatchField;
+import org.projectfloodlight.openflow.types.OFBufferId;
 
 /**
  * Run discovery process from a physical switch. Ports are initially labeled as
@@ -72,8 +74,6 @@ public class SwitchDiscoveryManager implements LLDPEventHandler, OVXSendMsg,
     // number of probes to send before link is removed
     private static final short MAX_PROBE_COUNT = 3;
     private Iterator<Short> slowIterator;
-    private final OVXMessageFactory ovxMessageFactory = OVXMessageFactory
-            .getInstance();
     private Logger log = LogManager.getLogger(SwitchDiscoveryManager.class.getName());
     private OVXLLDP lldpPacket;
     private Ethernet ethPacket;
@@ -139,7 +139,7 @@ public class SwitchDiscoveryManager implements LLDPEventHandler, OVXSendMsg,
                     log.warn(e.getMessage());
                     return;
                 }
-                this.slowPorts.add(port.getPortNumber());
+                this.slowPorts.add(port.getPortNo().getShortPortNumber());
                 this.slowIterator = this.slowPorts.iterator();
             }
         }
@@ -153,7 +153,7 @@ public class SwitchDiscoveryManager implements LLDPEventHandler, OVXSendMsg,
     public void removePort(final PhysicalPort port) {
         // Ignore ports that are not on this switch
         if (port.getParentSwitch().equals(this.sw)) {
-            short portnum = port.getPortNumber();
+            short portnum = port.getPortNo().getShortPortNumber();
             synchronized (this) {
                 if (this.slowPorts.contains(portnum)) {
                     this.slowPorts.remove(portnum);
@@ -181,7 +181,7 @@ public class SwitchDiscoveryManager implements LLDPEventHandler, OVXSendMsg,
      */
     public void ackProbe(final PhysicalPort port) {
         if (port.getParentSwitch().equals(this.sw)) {
-            final short portNumber = port.getPortNumber();
+            final short portNumber = port.getPortNo().getShortPortNumber();
             synchronized (this) {
                 if (this.slowPorts.contains(portNumber)) {
                     this.log.debug("Setting slow port to fast: {}:{}", port
@@ -216,24 +216,26 @@ public class SwitchDiscoveryManager implements LLDPEventHandler, OVXSendMsg,
             throw new PortMappingException(
                     "Cannot send LLDP associated with a nonexistent port");
         }
-        final OFPacketOut packetOut = (OFPacketOut) this.ovxMessageFactory
-                .getMessage(OFType.PACKET_OUT);
-        packetOut.setBufferId(OFPacketOut.BUFFER_ID_NONE);
+         
+        
         final List<OFAction> actionsList = new LinkedList<OFAction>();
-        final OFActionOutput out = (OFActionOutput) this.ovxMessageFactory
-                .getAction(OFActionType.OUTPUT);
-        out.setPort(port.getPortNumber());
+        final OFActionOutput out = OVXFactoryInst.myFactory.actions().buildOutput()
+        		.setPort(port.getPortNo())
+        		.build();
         actionsList.add(out);
-        packetOut.setActions(actionsList);
-        final short alen = SwitchDiscoveryManager.countActionsLen(actionsList);
+        
+        
         this.lldpPacket.setPort(port);
-        this.ethPacket.setSourceMACAddress(port.getHardwareAddress());
+        this.ethPacket.setSourceMACAddress(port.getHwAddr().getBytes());
 
         final byte[] lldp = this.ethPacket.serialize();
-        packetOut.setActionsLength(alen);
-        packetOut.setPacketData(lldp);
-        packetOut
-                .setLength((short) (OFPacketOut.MINIMUM_LENGTH + alen + lldp.length));
+        
+        final OFPacketOut packetOut = OVXFactoryInst.myFactory.buildPacketOut()
+        		.setBufferId(OFBufferId.NO_BUFFER)
+        	    .setActions(actionsList)
+        		.setData(lldp)
+        		.build();
+       
         return packetOut;
     }
 
@@ -250,25 +252,28 @@ public class SwitchDiscoveryManager implements LLDPEventHandler, OVXSendMsg,
             throw new PortMappingException(
                     "Cannot send LLDP associated with a nonexistent port");
         }
-        final OFPacketOut packetOut = (OFPacketOut) this.ovxMessageFactory
-                .getMessage(OFType.PACKET_OUT);
-        packetOut.setBufferId(OFPacketOut.BUFFER_ID_NONE);
+        
+        		
         final List<OFAction> actionsList = new LinkedList<OFAction>();
-        final OFActionOutput out = (OFActionOutput) this.ovxMessageFactory
-                .getAction(OFActionType.OUTPUT);
-        out.setPort(port.getPortNumber());
+        final OFActionOutput out = OVXFactoryInst.myFactory.actions().buildOutput()
+        		.setPort(port.getPortNo())
+        		.build();
         actionsList.add(out);
-        packetOut.setActions(actionsList);
-        final short alen = SwitchDiscoveryManager.countActionsLen(actionsList);
+        
+        
+        
         this.lldpPacket.setPort(port);
-        this.bddpEth.setSourceMACAddress(port.getHardwareAddress());
-
+        this.bddpEth.setSourceMACAddress(port.getHwAddr().getBytes());
         final byte[] bddp = this.bddpEth.serialize();
-        packetOut.setActionsLength(alen);
-        packetOut.setPacketData(bddp);
-        packetOut
-                .setLength((short) (OFPacketOut.MINIMUM_LENGTH + alen + bddp.length));
-        return packetOut;
+        
+        
+        final OFPacketOut packetOut = OVXFactoryInst.myFactory.buildPacketOut()
+        		.setBufferId(OFBufferId.NO_BUFFER)
+        		.setActions(actionsList)
+        		.setData(bddp)
+        		.build();
+        		
+       return packetOut;
     }
 
 
@@ -277,19 +282,6 @@ public class SwitchDiscoveryManager implements LLDPEventHandler, OVXSendMsg,
         this.sw.sendMsg(msg, this);
     }
 
-    /**
-     * Count the number of actions in a list of actions.
-     *
-     * @param actionsList list of actions
-     * @return the number of actions
-     */
-    private static short countActionsLen(final List<OFAction> actionsList) {
-        short count = 0;
-        for (final OFAction act : actionsList) {
-            count += act.getLength();
-        }
-        return count;
-    }
 
 
     @Override
@@ -302,13 +294,19 @@ public class SwitchDiscoveryManager implements LLDPEventHandler, OVXSendMsg,
      * to port where LLDP originated.
      */
     @SuppressWarnings("rawtypes")
-    public void handleLLDP(final OFMessage msg, final Switch sw) {
+    public void handleLLDP(final OFMessage msg, final Switch sw) throws SwitchMappingException {
         final OVXPacketIn pi = (OVXPacketIn) msg;
-        final byte[] pkt = pi.getPacketData();
+        final byte[] pkt = pi.getData();
 
         if (OVXLLDP.isOVXLLDP(pkt)) {
-            final PhysicalPort dstPort = (PhysicalPort) sw.getPort(pi
-                    .getInPort());
+            PhysicalPort dstPort = null;
+            if (OVXFactoryInst.ofversion == 10) {
+                dstPort = (PhysicalPort) sw.getPort(pi
+                        .getInPort().getShortPortNumber());
+            } else {
+                dstPort = (PhysicalPort) sw.getPort(pi.getMatch().get(MatchField.IN_PORT).getShortPortNumber());
+            }
+
             final DPIDandPort dp = OVXLLDP.parseLLDP(pkt);
             final PhysicalSwitch srcSwitch = PhysicalNetwork.getInstance()
                     .getSwitch(dp.getDpid());

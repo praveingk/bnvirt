@@ -15,17 +15,10 @@
  ******************************************************************************/
 package net.onrc.openvirtex.messages;
 
-import net.onrc.openvirtex.elements.datapath.PhysicalSwitch;
 
-import org.openflow.protocol.OFFeaturesReply;
+import org.projectfloodlight.openflow.protocol.OFFeaturesReply;
 
-public class OVXFeaturesReply extends OFFeaturesReply implements Virtualizable {
+public interface OVXFeaturesReply extends OFFeaturesReply, Virtualizable {
 
-    @Override
-    public void virtualize(final PhysicalSwitch sw) {
-        // TODO: Log error, we should never receive this message here
-        return;
-
-    }
 
 }

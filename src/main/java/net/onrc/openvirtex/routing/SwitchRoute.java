@@ -31,6 +31,7 @@ import java.util.Map;
 import net.onrc.openvirtex.api.Global.GlobalConfig;
 import net.onrc.openvirtex.api.Global.TAG;
 import net.onrc.openvirtex.api.service.handlers.TenantHandler;
+import net.onrc.openvirtex.core.OVXFactoryInst;
 import net.onrc.openvirtex.db.DBManager;
 import net.onrc.openvirtex.elements.Mapper.TenantMapperTos;
 import net.onrc.openvirtex.elements.Mapper.TenantMapperVlan;
@@ -51,18 +52,32 @@ import net.onrc.openvirtex.exceptions.DroppedMessageException;
 import net.onrc.openvirtex.exceptions.IndexOutOfBoundException;
 import net.onrc.openvirtex.exceptions.LinkMappingException;
 import net.onrc.openvirtex.exceptions.NetworkMappingException;
+import net.onrc.openvirtex.messages.OVXFlowAdd;
+import net.onrc.openvirtex.messages.OVXFlowDelete;
+import net.onrc.openvirtex.messages.OVXFlowDeleteStrict;
 import net.onrc.openvirtex.messages.OVXFlowMod;
+import net.onrc.openvirtex.messages.OVXFlowModify;
+import net.onrc.openvirtex.messages.OVXFlowModifyStrict;
 import net.onrc.openvirtex.packet.Ethernet;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.openflow.protocol.OFFlowMod;
-import org.openflow.protocol.OFPacketOut;
-import org.openflow.protocol.OFPort;
-import org.openflow.protocol.action.OFAction;
-import org.openflow.protocol.action.OFActionOutput;
-import org.openflow.protocol.action.OFActionType;
-import org.openflow.util.U8;
+import org.projectfloodlight.openflow.protocol.OFFlowAdd;
+import org.projectfloodlight.openflow.protocol.OFFlowMod;
+import org.projectfloodlight.openflow.protocol.OFFlowModCommand;
+import org.projectfloodlight.openflow.protocol.OFPacketOut;
+import org.projectfloodlight.openflow.protocol.OFType;
+import org.projectfloodlight.openflow.types.OFBufferId;
+import org.projectfloodlight.openflow.types.OFPort;
+import org.projectfloodlight.openflow.types.U64;
+import org.projectfloodlight.openflow.protocol.action.OFAction;
+import org.projectfloodlight.openflow.protocol.action.OFActionOutput;
+import org.projectfloodlight.openflow.protocol.OFActionType;
+import org.projectfloodlight.openflow.protocol.match.Match;
+import org.projectfloodlight.openflow.protocol.ver10.OFActionOutputVer10;
+import org.projectfloodlight.openflow.protocol.ver10.OFFlowModVer10;
+import org.projectfloodlight.openflow.types.U8;
+import org.projectfloodlight.openflow.protocol.OFMatchV1;
 
 /**
  * This class presents an abstraction for a route within a big switch.
@@ -276,30 +291,102 @@ Persistable {
                         + "the big-switch {} route {} between ports ({},{}) to the new path: {}",
                         this.getTenantId(), this.getSrcPort().getParentSwitch()
                         .getSwitchName(), this.getRouteId(), this.getSrcPort()
-                        .getPortNumber(), this.getDstPort().getPortNumber(),
+                        .getPortNo(), this.getDstPort().getPortNo(),
                         physicalLinks);
         Collection<OVXFlowMod> flows = this.getSrcPort().getParentSwitch()
                 .getFlowTable().getFlowTable();
         for (OVXFlowMod fe : flows) {
             for (OFAction act : fe.getActions()) {
                 if (act.getType() == OFActionType.OUTPUT
-                        && fe.getMatch().getInputPort() == this.getSrcPort()
-                        .getPortNumber()
+                        && ((OFMatchV1) fe.getMatch()).getInPort() == this.getSrcPort()
+                        .getPortNo()
                         && ((OFActionOutput) act).getPort() == this
-                        .getDstPort().getPortNumber()) {
+                        .getDstPort().getPortNo()) {
                     SwitchRoute.log.info(
                             "Virtual network {}, switch {}, route {} between ports {}-{}: switch fm {}",
                             this.getTenantId(), this.getSrcPort()
                             .getParentSwitch().getSwitchName(), this
                             .getRouteId(), this.getSrcPort()
-                            .getPortNumber(), this.getDstPort()
-                            .getPortNumber(), fe);
+                            .getPortNo(), this.getDstPort()
+                            .getPortNo(), fe);
                     counter++;
-
-                    OVXFlowMod fm = fe.clone();
-                    fm.setCookie(((OVXFlowTable) this.getSrcPort()
-                            .getParentSwitch().getFlowTable()).getCookie(fe,
-                                    true));
+                    
+                    U64 cookie=U64.of((
+            				(OVXFlowTable) this.getSrcPort()
+                    .getParentSwitch().getFlowTable()
+                    )
+                    .getCookie(fe,true));
+                    OVXFlowMod fm=null;
+                    if(fe.getCommand().equals(OFFlowModCommand.ADD))
+                    {
+                            fm=(OVXFlowMod) OVXFactoryInst.myOVXFactory.buildOVXFlowAdd(
+                    		fe.getXid(), 
+                    		fe.getMatch(), 
+                    		cookie, 
+                            fe.getIdleTimeout(), 
+                            fe.getHardTimeout(), 
+                            fe.getPriority(), 
+                            fe.getBufferId(), 
+                            fe.getOutPort(),
+                            fe.getFlags(), 
+                            fe.getActions());
+                    }
+                    else if(fe.getCommand().equals(OFFlowModCommand.DELETE))
+                    {
+                        fm=(OVXFlowMod) OVXFactoryInst.myOVXFactory.buildOVXFlowDelete(
+                		fe.getXid(), 
+                		fe.getMatch(), 
+                		cookie, 
+                        fe.getIdleTimeout(), 
+                        fe.getHardTimeout(), 
+                        fe.getPriority(), 
+                        fe.getBufferId(), 
+                        fe.getOutPort(),
+                        fe.getFlags(), 
+                        fe.getActions());
+                }
+                    else if(fe.getCommand().equals(OFFlowModCommand.DELETE_STRICT))
+                    {
+                            fm=(OVXFlowMod) OVXFactoryInst.myOVXFactory.buildOVXFlowDeleteStrict(
+                    		fe.getXid(), 
+                    		fe.getMatch(), 
+                    		cookie, 
+                            fe.getIdleTimeout(), 
+                            fe.getHardTimeout(), 
+                            fe.getPriority(), 
+                            fe.getBufferId(), 
+                            fe.getOutPort(),
+                            fe.getFlags(), 
+                            fe.getActions());
+                    }
+                    else if(fe.getCommand().equals(OFFlowModCommand.MODIFY))
+                    {
+                            fm=(OVXFlowMod) OVXFactoryInst.myOVXFactory.buildOVXFlowModify(
+                    		fe.getXid(), 
+                    		fe.getMatch(), 
+                    		cookie, 
+                            fe.getIdleTimeout(), 
+                            fe.getHardTimeout(), 
+                            fe.getPriority(), 
+                            fe.getBufferId(), 
+                            fe.getOutPort(),
+                            fe.getFlags(), 
+                            fe.getActions());
+                    }
+                    else if(fe.getCommand().equals(OFFlowModCommand.MODIFY_STRICT))
+                    {
+                            fm=(OVXFlowMod) OVXFactoryInst.myOVXFactory.buildOVXFlowModifyStrict(
+                    		fe.getXid(), 
+                    		fe.getMatch(), 
+                    		cookie, 
+                            fe.getIdleTimeout(), 
+                            fe.getHardTimeout(), 
+                            fe.getPriority(), 
+                            fe.getBufferId(), 
+                            fe.getOutPort(),
+                            fe.getFlags(), 
+                            fe.getActions());
+                    }
                     this.generateRouteFMs(fm);
                     this.generateFirstFM(fm);
                 }
@@ -309,7 +396,7 @@ Persistable {
                 "Virtual network {}, switch {}, route {} between ports {}-{}: {} flow-mod switched to the new path",
                 this.getTenantId(), this.getSrcPort().getParentSwitch()
                 .getSwitchName(), this.getRouteId(), this.getSrcPort()
-                .getPortNumber(), this.getDstPort().getPortNumber(),
+                .getPortNo(), this.getDstPort().getPortNo(),
                 counter);
     }
 
@@ -319,7 +406,7 @@ Persistable {
      *
      * @param fm the virtual flow mod
      */
-    public void generateRouteFMs(final OVXFlowMod fm) {
+    public void generateRouteFMs(OVXFlowMod fm) {
         // This list includes all the actions that have to be applied at the end
         // of the route
         final LinkedList<OFAction> outActions = new LinkedList<OFAction>();
@@ -331,14 +418,17 @@ Persistable {
          * last FM to rewrite the MACs - generate the route FMs
          */
         if (this.getDstPort().isEdge()) {
-            //TenantMapper.prependUnRewriteActions(fm.getMatch(), outActions);
-            if (GlobalConfig.bnvTagType == TAG.TOS) {
-                TenantMapperTos.prependUnRewriteActions(fm.getMatch(), outActions);
+			if (GlobalConfig.bnvTagType == TAG.TOS) {
+				TenantMapperTos.prependUnRewriteActions((OFMatchV1) fm.getMatch(), outActions);
             } else if (GlobalConfig.bnvTagType == TAG.VLAN) {
-                TenantMapperVlan.prependUnRewriteActions(fm.getMatch(), outActions);
-            } else if (GlobalConfig.bnvTagType == TAG.NOTAG){
+                TenantMapperVlan.prependUnRewriteActions((OFMatchV1) fm.getMatch(), outActions);
+            } else if (GlobalConfig.bnvTagType == TAG.IP) {
+				outActions.addAll(IPMapper.prependUnRewriteActions(fm.getMatch()));
+			} 
+			else if (GlobalConfig.bnvTagType == TAG.NOTAG){
                 /* Do Nothing */
             }
+            
         } else {
             final OVXLink link = this.getDstPort().getLink().getOutLink();
             Integer linkId = link.getLinkId();
@@ -348,9 +438,82 @@ Persistable {
                         .getInstance()
                         .getVirtualNetwork(this.getTenantId())
                         .getFlowManager()
-                        .storeFlowValues(fm.getMatch().getDataLayerSource(),
-                                fm.getMatch().getDataLayerDestination());
-                link.generateLinkFMs(fm.clone(), flowId);
+                        .storeFlowValues(((OFMatchV1)fm.getMatch()).getEthSrc().getBytes(),((OFMatchV1)
+                                fm.getMatch()).getEthDst().getBytes());
+                
+                OFFlowMod fm_clone = null;
+               
+                if(fm.getCommand().equals(OFFlowModCommand.ADD))
+                {
+                        fm_clone=(OVXFlowMod) OVXFactoryInst.myOVXFactory.buildOVXFlowAdd(
+                		fm.getXid(), 
+                		fm.getMatch(), 
+                		fm.getCookie(), 
+                        fm.getIdleTimeout(), 
+                        fm.getHardTimeout(), 
+                        fm.getPriority(), 
+                        fm.getBufferId(), 
+                        fm.getOutPort(),
+                        fm.getFlags(), 
+                        fm.getActions());
+                }
+                else if(fm.getCommand().equals(OFFlowModCommand.DELETE))
+                {
+                    fm_clone=(OVXFlowMod) OVXFactoryInst.myOVXFactory.buildOVXFlowDelete(
+            		fm.getXid(), 
+            		fm.getMatch(), 
+            		fm.getCookie(), 
+                    fm.getIdleTimeout(), 
+                    fm.getHardTimeout(), 
+                    fm.getPriority(), 
+                    fm.getBufferId(), 
+                    fm.getOutPort(),
+                    fm.getFlags(), 
+                    fm.getActions());
+             }
+                else if(fm.getCommand().equals(OFFlowModCommand.DELETE_STRICT))
+                {
+                        fm_clone=(OVXFlowMod) OVXFactoryInst.myOVXFactory.buildOVXFlowDeleteStrict(
+                		fm.getXid(), 
+                		fm.getMatch(), 
+                		fm.getCookie(), 
+                        fm.getIdleTimeout(), 
+                        fm.getHardTimeout(), 
+                        fm.getPriority(), 
+                        fm.getBufferId(), 
+                        fm.getOutPort(),
+                        fm.getFlags(), 
+                        fm.getActions());
+                }
+                else if(fm.getCommand().equals(OFFlowModCommand.MODIFY))
+                {
+                        fm_clone=(OVXFlowMod) OVXFactoryInst.myOVXFactory.buildOVXFlowModify(
+                		fm.getXid(), 
+                		fm.getMatch(), 
+                		fm.getCookie(), 
+                        fm.getIdleTimeout(), 
+                        fm.getHardTimeout(), 
+                        fm.getPriority(), 
+                        fm.getBufferId(), 
+                        fm.getOutPort(),
+                        fm.getFlags(), 
+                        fm.getActions());
+                }
+                else if(fm.getCommand().equals(OFFlowModCommand.MODIFY_STRICT))
+                {
+                        fm_clone=(OVXFlowMod) OVXFactoryInst.myOVXFactory.buildOVXFlowModifyStrict(
+                		fm.getXid(), 
+                		fm.getMatch(), 
+                		fm.getCookie(), 
+                        fm.getIdleTimeout(), 
+                        fm.getHardTimeout(), 
+                        fm.getPriority(), 
+                        fm.getBufferId(), 
+                        fm.getOutPort(),
+                        fm.getFlags(), 
+                        fm.getActions());
+                }
+                link.generateLinkFMs(fm_clone, flowId);
                 outActions.addAll(new OVXLinkUtils(this.getTenantId(), linkId,
                         flowId).setLinkFields());
             } catch (IndexOutOfBoundException e) {
@@ -368,24 +531,18 @@ Persistable {
          * If the packet has L3 fields (e.g. NOT ARP), change the packet match:
          * 1) change the fields where the physical ips are stored
          */
-        //if (fm.getMatch().getDataLayerType() == Ethernet.TYPE_IPV4) {
-            if (fm.getMatch().getDataLayerType() == Ethernet.TYPE_IPV4) {
+        if (((OFMatchV1)fm.getMatch()).getEthType().getValue() == Ethernet.TYPE_IPV4) {
                 if (GlobalConfig.bnvTagType == TAG.TOS) {
-                    TenantMapperTos.rewriteMatch(sw.getTenantId(), fm.getMatch());
+                    TenantMapperTos.rewriteMatch(sw.getTenantId(), (OFMatchV1) fm.getMatch());
                 } else if (GlobalConfig.bnvTagType == TAG.VLAN) {
-                    TenantMapperVlan.rewriteMatch(sw.getTenantId(), fm.getMatch());
-                } else if (GlobalConfig.bnvTagType == TAG.NOTAG) {
+                    TenantMapperVlan.rewriteMatch(sw.getTenantId(), (OFMatchV1) fm.getMatch());
+                } else if (GlobalConfig.bnvTagType == TAG.IP) {
+					IPMapper.rewriteMatch(this.getSrcPort().getTenantId(),fm.getMatch());
+				} else if (GlobalConfig.bnvTagType == TAG.NOTAG) {
                     /* Do Nothing */
                 }
-            }
-        //}
-
-        /*
-         * BNV does not have IP address translation due to switch-support.
-         * Can be enabled if switch supports it.
-         */
-
-
+            
+        }
 
         /*
          * Get the list of physical links mapped to this virtual link, in
@@ -393,8 +550,7 @@ Persistable {
          */
         PhysicalPort inPort = null;
         PhysicalPort outPort = null;
-        fm.setBufferId(OFPacketOut.BUFFER_ID_NONE);
-
+        
         final SwitchRoute route = ((OVXBigSwitch) this.getSrcPort()
                 .getParentSwitch()).getRoute(this.getSrcPort(),
                         this.getDstPort());
@@ -414,11 +570,80 @@ Persistable {
         for (final PhysicalLink phyLink : reverseLinks) {
             if (outPort != null) {
                 inPort = phyLink.getSrcPort();
-                fm.getMatch().setInputPort(inPort.getPortNumber());
-                fm.setLengthU(OFFlowMod.MINIMUM_LENGTH
-                        + OFActionOutput.MINIMUM_LENGTH);
-                fm.setActions(Arrays.asList((OFAction) new OFActionOutput(
-                        outPort.getPortNumber(), (short) 0xffff)));
+                
+                Match fm_match=((OFMatchV1)fm.getMatch()).createBuilder()
+                		.setInPort(inPort.getPortNo()).build();
+                
+                List<OFAction> actions=Arrays.asList((OFAction)OVXFactoryInst.myFactory.actions().buildOutput()
+                .setPort(outPort.getPortNo())
+                .setMaxLen((short) 0xffff)
+                .build());
+               
+                if(fm.getCommand().equals(OFFlowModCommand.ADD))
+                {
+                fm=OVXFactoryInst.myOVXFactory.buildOVXFlowAdd(fm.getXid(),
+                		fm_match,
+                		fm.getCookie(), 
+                		fm.getIdleTimeout(),
+                		fm.getHardTimeout(), 
+                		fm.getPriority(), 
+                		OFBufferId.NO_BUFFER, 
+                		fm.getOutPort(), 
+                		fm.getFlags(),
+                		actions);
+                }
+                else if(fm.getCommand().equals(OFFlowModCommand.DELETE))
+                {
+                    fm=OVXFactoryInst.myOVXFactory.buildOVXFlowDelete(fm.getXid(),
+                    		fm_match,
+                    		fm.getCookie(), 
+                    		fm.getIdleTimeout(),
+                    		fm.getHardTimeout(), 
+                    		fm.getPriority(), 
+                    		OFBufferId.NO_BUFFER, 
+                    		fm.getOutPort(), 
+                    		fm.getFlags(),
+                    		actions);
+                 }
+                else if(fm.getCommand().equals(OFFlowModCommand.DELETE_STRICT))
+                {
+                    fm=OVXFactoryInst.myOVXFactory.buildOVXFlowDeleteStrict(fm.getXid(),
+                    		fm_match,
+                    		fm.getCookie(), 
+                    		fm.getIdleTimeout(),
+                    		fm.getHardTimeout(), 
+                    		fm.getPriority(), 
+                    		OFBufferId.NO_BUFFER, 
+                    		fm.getOutPort(), 
+                    		fm.getFlags(),
+                    		actions);
+                 }
+                else if(fm.getCommand().equals(OFFlowModCommand.MODIFY))
+                {
+                    fm=OVXFactoryInst.myOVXFactory.buildOVXFlowModify(fm.getXid(),
+                    		fm_match,
+                    		fm.getCookie(), 
+                    		fm.getIdleTimeout(),
+                    		fm.getHardTimeout(), 
+                    		fm.getPriority(), 
+                    		OFBufferId.NO_BUFFER, 
+                    		fm.getOutPort(), 
+                    		fm.getFlags(),
+                    		actions);
+                 }
+                else if(fm.getCommand().equals(OFFlowModCommand.MODIFY_STRICT))
+                {
+                    fm=OVXFactoryInst.myOVXFactory.buildOVXFlowModifyStrict(fm.getXid(),
+                    		fm_match,
+                    		fm.getCookie(), 
+                    		fm.getIdleTimeout(),
+                    		fm.getHardTimeout(), 
+                    		fm.getPriority(), 
+                    		OFBufferId.NO_BUFFER, 
+                    		fm.getOutPort(), 
+                    		fm.getFlags(),
+                    		actions);
+                 }
                 phyLink.getSrcPort().getParentSwitch()
                 .sendMsg(fm, phyLink.getSrcPort().getParentSwitch());
                 SwitchRoute.log.debug(
@@ -430,16 +655,84 @@ Persistable {
                  * Last fm. Differs from the others because it can apply
                  * additional actions to the flow
                  */
-                fm.getMatch()
-                .setInputPort(phyLink.getSrcPort().getPortNumber());
-                int actLenght = 0;
-                outActions.add(new OFActionOutput(this.getDstPort()
-                        .getPhysicalPortNumber(), (short) 0xffff));
-                fm.setActions(outActions);
-                for (final OFAction act : outActions) {
-                    actLenght += act.getLengthU();
+                
+            	Match fm_match=((OFMatchV1)fm.getMatch()).createBuilder()
+                		.setInPort(phyLink.getSrcPort().getPortNo()).build();
+                
+                List<OFAction> actions=Arrays.asList((OFAction)OVXFactoryInst.myFactory.actions().buildOutput()
+                .setPort(OFPort.ofShort(this.getDstPort()
+                        .getPhysicalPortNumber()))
+                .setMaxLen((short) 0xffff)
+                .build());
+            	
+                if(fm.getCommand().equals(OFFlowModCommand.ADD))
+                {
+                fm=OVXFactoryInst.myOVXFactory.buildOVXFlowAdd(fm.getXid(),
+                		fm_match,
+                		fm.getCookie(), 
+                		fm.getIdleTimeout(),
+                		fm.getHardTimeout(), 
+                		fm.getPriority(), 
+                		OFBufferId.NO_BUFFER, 
+                		fm.getOutPort(), 
+                		fm.getFlags(),
+                		actions);
                 }
-                fm.setLengthU(OFFlowMod.MINIMUM_LENGTH + actLenght);
+                else if(fm.getCommand().equals(OFFlowModCommand.DELETE))
+                {
+                    fm=OVXFactoryInst.myOVXFactory.buildOVXFlowDelete(fm.getXid(),
+                    		fm_match,
+                    		fm.getCookie(), 
+                    		fm.getIdleTimeout(),
+                    		fm.getHardTimeout(), 
+                    		fm.getPriority(), 
+                    		OFBufferId.NO_BUFFER, 
+                    		fm.getOutPort(), 
+                    		fm.getFlags(),
+                    		actions);
+                 }
+                else if(fm.getCommand().equals(OFFlowModCommand.DELETE_STRICT))
+                {
+                    fm=OVXFactoryInst.myOVXFactory.buildOVXFlowDeleteStrict(fm.getXid(),
+                    		fm_match,
+                    		fm.getCookie(), 
+                    		fm.getIdleTimeout(),
+                    		fm.getHardTimeout(), 
+                    		fm.getPriority(), 
+                    		OFBufferId.NO_BUFFER, 
+                    		fm.getOutPort(), 
+                    		fm.getFlags(),
+                    		actions);
+                 }
+                else if(fm.getCommand().equals(OFFlowModCommand.MODIFY))
+                {
+                    fm=OVXFactoryInst.myOVXFactory.buildOVXFlowModify(fm.getXid(),
+                    		fm_match,
+                    		fm.getCookie(), 
+                    		fm.getIdleTimeout(),
+                    		fm.getHardTimeout(), 
+                    		fm.getPriority(), 
+                    		OFBufferId.NO_BUFFER, 
+                    		fm.getOutPort(), 
+                    		fm.getFlags(),
+                    		actions);
+                 }
+                else if(fm.getCommand().equals(OFFlowModCommand.MODIFY_STRICT))
+                {
+                    fm=OVXFactoryInst.myOVXFactory.buildOVXFlowModifyStrict(fm.getXid(),
+                    		fm_match,
+                    		fm.getCookie(), 
+                    		fm.getIdleTimeout(),
+                    		fm.getHardTimeout(), 
+                    		fm.getPriority(), 
+                    		OFBufferId.NO_BUFFER, 
+                    		fm.getOutPort(), 
+                    		fm.getFlags(),
+                    		actions);
+                 }
+                
+                
+                
                 phyLink.getSrcPort().getParentSwitch()
                 .sendMsg(fm, phyLink.getSrcPort().getParentSwitch());
                 SwitchRoute.log.debug("Sending big-switch route last fm to sw {}: {}",
@@ -464,8 +757,7 @@ Persistable {
      * @param fm the virtual flow mod
      */
     private void generateFirstFM(OVXFlowMod fm) {
-        fm.setBufferId(OFPacketOut.BUFFER_ID_NONE);
-        System.out.println("Pravein : Generating First FM");
+        
         final List<OFAction> approvedActions = new LinkedList<OFAction>();
         if (this.getSrcPort().isLink()) {
             OVXPort dstPort = null;
@@ -485,8 +777,8 @@ Persistable {
                             .getInstance()
                             .getVirtualNetwork(this.getTenantId())
                             .getFlowManager()
-                            .getFlowId(fm.getMatch().getDataLayerSource(),
-                                    fm.getMatch().getDataLayerDestination());
+                            .getFlowId(((OFMatchV1)fm.getMatch()).getEthSrc().getBytes(),
+                                    ((OFMatchV1)fm.getMatch()).getEthDst().getBytes());
                 } catch (NetworkMappingException e) {
                     SwitchRoute.log.warn(
                             "Error retrieving the network with id {} for flowMod {}. Dropping packet...",
@@ -506,14 +798,16 @@ Persistable {
                 }
                 OVXLinkUtils lUtils = new OVXLinkUtils(this.getTenantId(), link.getLinkId(), flowId);
                 lUtils.rewriteMatch(fm.getMatch());
-                //TenantMapper.rewriteMatch(this.getTenantId(), fm.getMatch());
                 if (GlobalConfig.bnvTagType == TAG.TOS) {
-                    TenantMapperTos.rewriteMatch(sw.getTenantId(), fm.getMatch());
+                    TenantMapperTos.rewriteMatch(sw.getTenantId(), (OFMatchV1) fm.getMatch());
                 } else if (GlobalConfig.bnvTagType == TAG.VLAN) {
-                    TenantMapperVlan.rewriteMatch(sw.getTenantId(), fm.getMatch());
-                } else if (GlobalConfig.bnvTagType == TAG.NOTAG){
+                    TenantMapperVlan.rewriteMatch(sw.getTenantId(), (OFMatchV1) fm.getMatch());
+                } else if (GlobalConfig.bnvTagType == TAG.IP) {
+					IPMapper.rewriteMatch(this.getTenantId(), fm.getMatch());
+				} else if (GlobalConfig.bnvTagType == TAG.NOTAG){
                     /* Do Nothing */
                 }
+                
                 approvedActions.addAll(lUtils.unsetLinkFields(false, false));
             } else {
                 SwitchRoute.log.warn(
@@ -522,37 +816,51 @@ Persistable {
                 return;
             }
         } else {
-            //TenantMapper.prependRewriteActions(
-            //       this.getTenantId(), fm.getMatch(), approvedActions);
             if (GlobalConfig.bnvTagType == TAG.TOS) {
-                TenantMapperTos.prependRewriteActions(sw.getTenantId(), fm.getMatch(), approvedActions);
+                TenantMapperTos.prependRewriteActions(sw.getTenantId(), (OFMatchV1) fm.getMatch(), approvedActions);
             } else if (GlobalConfig.bnvTagType == TAG.VLAN) {
-                TenantMapperVlan.prependRewriteActions(sw.getTenantId(), fm.getMatch(), approvedActions);
-            } else if (GlobalConfig.bnvTagType == TAG.NOTAG){
+                TenantMapperVlan.prependRewriteActions(sw.getTenantId(), (OFMatchV1) fm.getMatch(), approvedActions);
+            } else if (GlobalConfig.bnvTagType == TAG.IP) {
+				approvedActions.addAll(IPMapper.prependRewriteActions(this.getTenantId(), fm.getMatch()));
+			} else if (GlobalConfig.bnvTagType == TAG.NOTAG){
                     /* Do Nothing */
             }
+            
         }
-
-        fm.getMatch().setInputPort(this.getSrcPort().getPhysicalPortNumber());
-
         // add the output action with the physical outPort (srcPort of the
         // route)
         if (this.getSrcPort().getPhysicalPortNumber() != this.getPathSrcPort()
-                .getPortNumber()) {
-            approvedActions.add(new OFActionOutput(this.getPathSrcPort()
-                    .getPortNumber()));
+                .getPortNo().getShortPortNumber()) {
+            approvedActions.add( OVXFactoryInst.myFactory.actions().buildOutput()
+                    .setPort(this.getPathSrcPort()
+                            .getPortNo())
+                    .build());
+            
+           
         } else {
-            approvedActions.add(new OFActionOutput(OFPort.OFPP_IN_PORT
-                    .getValue()));
+        	approvedActions.add( OVXFactoryInst.myFactory.actions().buildOutput()
+                    .setPort(OFPort.IN_PORT)
+                    .build());
+            
         }
 
-        fm.setCommand(OFFlowMod.OFPFC_MODIFY);
-        fm.setActions(approvedActions);
-        int actLenght = 0;
-        for (final OFAction act : approvedActions) {
-            actLenght += act.getLengthU();
-        }
-        fm.setLengthU(OFFlowMod.MINIMUM_LENGTH + actLenght);
+        
+       
+        Match fm_match=((OFMatchV1)fm.getMatch()).createBuilder()
+        		.setInPort(OFPort.ofShort(this.getSrcPort().getPhysicalPortNumber())).build();
+       
+        fm=OVXFactoryInst.myOVXFactory.buildOVXFlowModify(fm.getXid(),
+        		fm_match,
+        		fm.getCookie(), 
+        		fm.getIdleTimeout(),
+        		fm.getHardTimeout(), 
+        		fm.getPriority(), 
+        		OFBufferId.NO_BUFFER, 
+        		fm.getOutPort(), 
+        		fm.getFlags(),
+        		approvedActions);
+        
+        
         this.getSrcSwitch().sendMsg(fm, this.getSrcSwitch());
         SwitchRoute.log.debug("Sending big-switch route first fm to sw {}: {}", this
                 .getSrcSwitch().getName(), fm);
@@ -592,8 +900,8 @@ Persistable {
         try {
             Map<String, Object> dbObject = new HashMap<String, Object>();
             dbObject.put(TenantHandler.VDPID, this.getSwitchId());
-            dbObject.put(TenantHandler.SRC_PORT, this.srcPort.getPortNumber());
-            dbObject.put(TenantHandler.DST_PORT, this.dstPort.getPortNumber());
+            dbObject.put(TenantHandler.SRC_PORT, this.srcPort.getPortNo());
+            dbObject.put(TenantHandler.DST_PORT, this.dstPort.getPortNo());
             dbObject.put(TenantHandler.PRIORITY, this.priority);
             dbObject.put(TenantHandler.ROUTE, this.routeId);
             // Build path list
@@ -627,7 +935,7 @@ Persistable {
                         + "({},{}) in virtual network {} ",
                         this.getTenantId(), this.getSrcPort().getParentSwitch()
                         .getSwitchName(), this.routeId, this.getSrcPort()
-                        .getPortNumber(), this.getDstPort().getPortNumber(),
+                        .getPortNo(), this.getDstPort().getPortNo(),
                         this.getTenantId());
         if (this.backupRoutes.size() > 0) {
             try {
@@ -686,8 +994,8 @@ Persistable {
                                 + "internal route {} between ports ({},{}) in virtual network {} ",
                                 this.getTenantId(), this.getSrcPort().getParentSwitch()
                                 .getSwitchName(), this.routeId, this
-                                .getSrcPort().getPortNumber(), this
-                                .getDstPort().getPortNumber(), this
+                                .getSrcPort().getPortNo(), this
+                                .getDstPort().getPortNo(), this
                                 .getTenantId());
 
                 if (U8.f(this.getPriority()) >= U8.f(curPriority)) {

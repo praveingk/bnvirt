@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.openflow.util.HexString;
+import org.projectfloodlight.openflow.util.HexString;
 
 import net.onrc.openvirtex.elements.OVXMap;
 import net.onrc.openvirtex.elements.datapath.OVXBigSwitch;
@@ -453,9 +453,9 @@ public final class HandlerUtils {
                     throw new VirtualLinkException(
                             "Physical path not correct. Destination port of one hop as to be different to source port "
                                     + "of the next hop, but "
-                                    + oldLink.getDstPort().getPortNumber()
+                                    + oldLink.getDstPort().getPortNo()
                                     + " != "
-                                    + link.getSrcPort().getPortNumber());
+                                    + link.getSrcPort().getPortNo());
                 }
             }
             oldLink = link;
@@ -490,12 +490,12 @@ public final class HandlerUtils {
                             + srcPort.getPhysicalPort().getParentSwitch()
                             .getSwitchName()
                             + "/"
-                            + srcPort.getPhysicalPort().getPortNumber()
+                            + srcPort.getPhysicalPort().getPortNo()
                             + ", physical path starts from: "
                             + physicalLinks.get(0).getSrcPort()
                             .getParentSwitch().getSwitchName()
                             + "/"
-                            + physicalLinks.get(0).getSrcPort().getPortNumber());
+                            + physicalLinks.get(0).getSrcPort().getPortNo());
         }
         if (!dstPort.getPhysicalPort().equals(
                 physicalLinks.get(physicalLinks.size() - 1).getDstPort())) {
@@ -505,14 +505,14 @@ public final class HandlerUtils {
                             + dstPort.getPhysicalPort().getParentSwitch()
                             .getSwitchName()
                             + "/"
-                            + dstPort.getPhysicalPort().getPortNumber()
+                            + dstPort.getPhysicalPort().getPortNo()
                             + ", physical path starts from: "
                             + physicalLinks.get(physicalLinks.size() - 1)
                             .getDstPort().getParentSwitch()
                             .getSwitchName()
                             + "/"
                             + physicalLinks.get(physicalLinks.size() - 1)
-                            .getDstPort().getPortNumber());
+                            .getDstPort().getPortNo());
         }
     }
 

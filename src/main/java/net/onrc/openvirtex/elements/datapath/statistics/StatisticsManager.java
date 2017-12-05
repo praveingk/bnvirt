@@ -16,26 +16,34 @@
 package net.onrc.openvirtex.elements.datapath.statistics;
 
 import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import net.onrc.openvirtex.core.OVXFactoryInst;
 import net.onrc.openvirtex.core.OpenVirteXController;
 import net.onrc.openvirtex.core.io.OVXSendMsg;
 import net.onrc.openvirtex.elements.datapath.PhysicalSwitch;
 import net.onrc.openvirtex.elements.network.PhysicalNetwork;
-import net.onrc.openvirtex.messages.OVXStatisticsRequest;
-import net.onrc.openvirtex.messages.statistics.OVXFlowStatisticsRequest;
-import net.onrc.openvirtex.messages.statistics.OVXPortStatisticsRequest;
+import net.onrc.openvirtex.messages.OVXStatsRequest;
+import net.onrc.openvirtex.messages.statistics.OVXFlowStatsRequest;
+import net.onrc.openvirtex.messages.statistics.OVXPortStatsRequest;
+import net.onrc.openvirtex.messages.statistics.ver10.OVXPortStatsRequestVer10;
 import net.onrc.openvirtex.protocol.OVXMatch;
 
+import net.onrc.openvirtex.protocol.OVXMatchV3;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timeout;
 import org.jboss.netty.util.TimerTask;
-import org.openflow.protocol.OFMessage;
-import org.openflow.protocol.OFPort;
-import org.openflow.protocol.Wildcards;
-import org.openflow.protocol.statistics.OFStatisticsType;
+import org.projectfloodlight.openflow.protocol.*;
+import org.projectfloodlight.openflow.protocol.match.MatchFields;
+import org.projectfloodlight.openflow.protocol.oxm.OFOxm;
+import org.projectfloodlight.openflow.types.*;
+import org.projectfloodlight.openflow.protocol.ver10.OFFlowWildcardsSerializerVer10;
+
+import com.google.common.collect.ImmutableSet;
 
 public class StatisticsManager implements TimerTask, OVXSendMsg {
 
@@ -72,30 +80,40 @@ public class StatisticsManager implements TimerTask, OVXSendMsg {
     }
 
     private void sendFlowStatistics(int tid, short port) {
-        OVXStatisticsRequest req = new OVXStatisticsRequest();
-        // TODO: stuff like below should be wrapped into an XIDUtil class
         int xid = (tid << 16) | port;
-        req.setXid(xid);
-        req.setStatisticType(OFStatisticsType.FLOW);
-        OVXFlowStatisticsRequest freq = new OVXFlowStatisticsRequest();
-        OVXMatch match = new OVXMatch();
-        match.setWildcards(Wildcards.FULL);
-        freq.setMatch(match);
-        freq.setOutPort(OFPort.OFPP_NONE.getValue());
-        freq.setTableId((byte) 0xFF);
-        req.setStatistics(Collections.singletonList(freq));
-        req.setLengthU(req.getLengthU() + freq.getLength());
-        sendMsg(req, this);
+        final int DEFAULT_WILDCARDS = OFFlowWildcardsSerializerVer10.ALL_VAL;
+        final OFPort DEFAULT_IN_PORT = OFPort.ZERO;
+        final MacAddress DEFAULT_ETH_SRC = MacAddress.NONE;
+        final MacAddress DEFAULT_ETH_DST = MacAddress.NONE;
+        final OFVlanVidMatch DEFAULT_VLAN_VID = OFVlanVidMatch.NONE;
+        final VlanPcp DEFAULT_VLAN_PCP = VlanPcp.NONE;
+        final EthType DEFAULT_ETH_TYPE = EthType.NONE;
+        final IpDscp DEFAULT_IP_DSCP = IpDscp.NONE;
+        final IpProtocol DEFAULT_IP_PROTO = IpProtocol.NONE;
+        final IPv4Address DEFAULT_IPV4_SRC = IPv4Address.NONE;
+        final IPv4Address DEFAULT_IPV4_DST = IPv4Address.NONE;
+        final TransportPort DEFAULT_TCP_SRC = TransportPort.NONE;
+        final TransportPort DEFAULT_TCP_DST = TransportPort.NONE;
+
+        OVXFlowStatsRequest freq = null;
+        if (OVXFactoryInst.ofversion == 10) {
+            OVXMatch match = OVXFactoryInst.myOVXFactory.buildOVXMatchV1(OFFlowWildcardsSerializerVer10.ALL_VAL, DEFAULT_IN_PORT, DEFAULT_ETH_SRC, DEFAULT_ETH_DST, DEFAULT_VLAN_VID, DEFAULT_VLAN_PCP, DEFAULT_ETH_TYPE, DEFAULT_IP_DSCP, DEFAULT_IP_PROTO, DEFAULT_IPV4_SRC, DEFAULT_IPV4_DST, DEFAULT_TCP_SRC, DEFAULT_TCP_DST, 0, null);
+            freq = OVXFactoryInst.myOVXFactory.buildOVXFlowStatsRequest((long) xid, ImmutableSet.<OFStatsRequestFlags>of(), match, TableId.ALL, OFPort.ANY);
+        } else {
+            Map<MatchFields, OFOxm<?>> oxmMap = new LinkedHashMap<>();
+            OFOxmList oxmList = new OFOxmList(oxmMap);
+            OVXMatchV3 match = OVXFactoryInst.myOVXFactory.buildOVXMatchV3(oxmList,0, null);
+            freq = OVXFactoryInst.myOVXFactory.buildOVXFlowStatsRequest((long) xid, ImmutableSet.<OFStatsRequestFlags>of(), TableId.ALL, OFPort.ANY, OFGroup.ANY, U64.ZERO, U64.FULL_MASK, match);
+
+        }
+
+        sendMsg(freq, this);
     }
 
     private void sendPortStatistics() {
-        OVXStatisticsRequest req = new OVXStatisticsRequest();
-        req.setStatisticType(OFStatisticsType.PORT);
-        OVXPortStatisticsRequest preq = new OVXPortStatisticsRequest();
-        preq.setPortNumber(OFPort.OFPP_NONE.getValue());
-        req.setStatistics(Collections.singletonList(preq));
-        req.setLengthU(req.getLengthU() + preq.getLength());
-        sendMsg(req, this);
+
+    	OVXPortStatsRequest preq =OVXFactoryInst.myOVXFactory.buildOVXPortStatsRequest((long)this.hashCode(), ImmutableSet.<OFStatsRequestFlags>of(), OFPort.ANY);
+        sendMsg(preq, this);
     }
 
     public void start() {

@@ -4,6 +4,7 @@ import net.onrc.openvirtex.elements.datapath.DPIDandPort;
 import net.onrc.openvirtex.elements.datapath.DPIDandPortPair;
 import net.onrc.openvirtex.elements.datapath.PhysicalSwitch;
 import net.onrc.openvirtex.elements.port.PhysicalPort;
+import net.onrc.openvirtex.exceptions.SwitchMappingException;
 
 import java.util.ArrayList;
 import java.util.Set;
@@ -98,8 +99,12 @@ public class LoopNetwork {
                 System.out.println("dPort is null!");
                 continue;
             }
-            myNet.createLink(sPort,dPort);
-            myNet.createLink(dPort,sPort);
+            try {
+                myNet.createLink(sPort,dPort);
+                myNet.createLink(dPort,sPort);
+            } catch (SwitchMappingException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -165,8 +170,13 @@ public class LoopNetwork {
                 System.out.println("dPort is null!");
                 continue;
             }
-            myNet.createLink(sPort,dPort);
-            myNet.createLink(dPort,sPort);
+            try {
+                myNet.createLink(sPort,dPort);
+                myNet.createLink(dPort,sPort);
+            } catch (SwitchMappingException e) {
+                e.printStackTrace();
+            }
+
         }
 
 
@@ -194,8 +204,12 @@ public class LoopNetwork {
                 System.out.println("dPort is null!");
                 continue;
             }
-            myNet.createLink(sPort,dPort);
-            myNet.createLink(dPort,sPort);
+            try {
+                myNet.createLink(sPort,dPort);
+                myNet.createLink(dPort,sPort);
+            } catch (SwitchMappingException e) {
+                e.printStackTrace();
+            }
         }
     }
 }

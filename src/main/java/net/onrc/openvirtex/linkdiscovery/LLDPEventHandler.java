@@ -16,12 +16,13 @@
 package net.onrc.openvirtex.linkdiscovery;
 
 import net.onrc.openvirtex.elements.datapath.Switch;
+import net.onrc.openvirtex.exceptions.SwitchMappingException;
 
-import org.openflow.protocol.OFMessage;
+import org.projectfloodlight.openflow.protocol.OFMessage;
 
 @SuppressWarnings("rawtypes")
 public interface LLDPEventHandler {
 
-    public void handleLLDP(OFMessage msg, Switch sw);
+    public void handleLLDP(OFMessage msg, Switch sw) throws SwitchMappingException;
 
 }

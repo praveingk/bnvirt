@@ -16,7 +16,7 @@
 package net.onrc.openvirtex.messages.statistics;
 
 import net.onrc.openvirtex.elements.datapath.OVXSwitch;
-import net.onrc.openvirtex.messages.OVXStatisticsRequest;
+import net.onrc.openvirtex.messages.OVXStatsRequest;
 
 /**
  * Interface for statistics devirtualization.
@@ -31,6 +31,6 @@ public interface DevirtualizableStatistic {
      * @param msg
      *            the actual statistics message
      */
-    public void devirtualizeStatistic(OVXSwitch sw, OVXStatisticsRequest msg);
+    public void devirtualizeStatistic(OVXSwitch sw, OVXStatsRequest msg);
 
 }

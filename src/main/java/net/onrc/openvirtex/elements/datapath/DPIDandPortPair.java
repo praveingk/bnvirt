@@ -69,7 +69,6 @@ public class DPIDandPortPair {
         result = prime * result + ((src == null) ? 0 : src.hashCode());
         return result;
     }
-
     @Override
     public String toString() {
         return src.dpid + ":" + src.port+","+dst.dpid+":"+dst.port;

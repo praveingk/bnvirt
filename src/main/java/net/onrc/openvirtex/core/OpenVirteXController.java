@@ -31,6 +31,7 @@ import net.onrc.openvirtex.elements.link.OVXLinkField;
 import net.onrc.openvirtex.elements.network.OVXNetwork;
 import net.onrc.openvirtex.elements.network.PhysicalNetwork;
 import net.onrc.openvirtex.exceptions.NetworkMappingException;
+import net.onrc.openvirtex.messages.OVXFactories;
 import net.onrc.openvirtex.util.BitSetIndex;
 import net.onrc.openvirtex.util.BitSetIndex.IndexType;
 
@@ -46,12 +47,17 @@ import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
-import org.openflow.vendor.nicira.OFNiciraVendorExtensions;
+//import org.openflow.vendor.nicira.OFNiciraVendorExtensions;
+import org.projectfloodlight.openflow.protocol.OFFactories;
+import org.projectfloodlight.openflow.protocol.OFFactory;
+import org.projectfloodlight.openflow.protocol.OFVersion;
 
 public class OpenVirteXController implements Runnable {
 
     Logger log = LogManager.getLogger(OpenVirteXController.class.getName());
 
+    OFFactory my10Factory; 
+    
     private static final int SEND_BUFFER_SIZE = 1024 * 1024;
     private static OpenVirteXController instance = null;
     private static BitSetIndex tenantIdCounter = null;
@@ -88,7 +94,36 @@ public class OpenVirteXController implements Runnable {
 
     private final Boolean useBDDP;
 
+    private int ofversion = 10;
+
     public OpenVirteXController(CmdLineSettings settings) {
+    	OVXFactoryInst.ofversion=settings.getOFVersion();
+
+    	switch(OVXFactoryInst.ofversion)
+    	{
+    	case 10:
+    		OVXFactoryInst.myFactory= OFFactories.getFactory(OFVersion.OF_10);
+    		OVXFactoryInst.myOVXFactory=OVXFactories.getFactory(OFVersion.OF_10);
+    		break;
+    	case 11:
+    		OVXFactoryInst.myFactory= OFFactories.getFactory(OFVersion.OF_11);
+    		OVXFactoryInst.myOVXFactory=OVXFactories.getFactory(OFVersion.OF_11);
+    		break;
+    	case 12:
+    		OVXFactoryInst.myFactory= OFFactories.getFactory(OFVersion.OF_12);
+    		OVXFactoryInst.myOVXFactory=OVXFactories.getFactory(OFVersion.OF_12);
+    		break;	
+    	case 13:
+    		OVXFactoryInst.myFactory= OFFactories.getFactory(OFVersion.OF_13);
+    		OVXFactoryInst.myOVXFactory=OVXFactories.getFactory(OFVersion.OF_13);
+    		break;	
+    	case 14:
+    		OVXFactoryInst.myFactory= OFFactories.getFactory(OFVersion.OF_14);
+    		OVXFactoryInst.myOVXFactory=OVXFactories.getFactory(OFVersion.OF_14);
+    		break;	
+    	default:
+            throw new IllegalArgumentException("Unknown version: "+OVXFactoryInst.ofversion);
+    	}
         this.ofHost = settings.getOFHost();
         this.ofPort = settings.getOFPort();
         this.dbHost = settings.getDBHost();
@@ -114,7 +149,7 @@ public class OpenVirteXController implements Runnable {
     @Override
     public void run() {
         Runtime.getRuntime().addShutdownHook(new OpenVirtexShutdownHook(this));
-        initVendorMessages();
+       // initVendorMessages();
         PhysicalNetwork.getInstance().boot();
 
         this.startDatabase();
@@ -283,12 +318,12 @@ public class OpenVirteXController implements Runnable {
         return tenantIdCounter;
     }
 
-    private void initVendorMessages() {
+   /* private void initVendorMessages() {
         // Configure openflowj to be able to parse the role request/reply
         // vendor messages.
         OFNiciraVendorExtensions.initialize();
 
-    }
+    }*/
 
     public Boolean getUseBDDP() {
         return this.useBDDP;

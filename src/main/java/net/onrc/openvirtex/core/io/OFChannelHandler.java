@@ -22,7 +22,8 @@ import net.onrc.openvirtex.elements.datapath.Switch;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.handler.timeout.IdleStateAwareChannelHandler;
-import org.openflow.protocol.OFType;
+import org.projectfloodlight.openflow.protocol.OFMessage;
+import org.projectfloodlight.openflow.protocol.OFType;
 
 public abstract class OFChannelHandler extends IdleStateAwareChannelHandler {
 
@@ -35,7 +36,8 @@ public abstract class OFChannelHandler extends IdleStateAwareChannelHandler {
 
     protected abstract String getSwitchInfoString();
 
-    protected abstract void sendHandShakeMessage(OFType type)
+    protected abstract OFMessage sendHandShakeMessage(OFType type)
             throws IOException;
+
 
 }

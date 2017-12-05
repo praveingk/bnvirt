@@ -39,7 +39,7 @@ import java.util.Map;
 
 import net.onrc.openvirtex.util.MACAddress;
 
-import org.openflow.util.HexString;
+import org.projectfloodlight.openflow.util.HexString;
 
 /**
  *
@@ -50,7 +50,6 @@ public class Ethernet extends BasePacket {
     public static final short TYPE_ARP = 0x0806;
     public static final short TYPE_RARP = (short) 0x8035;
     public static final short TYPE_IPV4 = 0x0800;
-    public static final short TYPE_VLAN = (short) 0x8100;
     public static final short TYPE_LLDP = (short) 0x88cc;
     public static final short TYPE_BSN = (short) 0x8942;
     public static final short VLAN_UNTAGGED = (short) 0xffff;

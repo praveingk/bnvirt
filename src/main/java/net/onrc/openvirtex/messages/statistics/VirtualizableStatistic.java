@@ -16,7 +16,7 @@
 package net.onrc.openvirtex.messages.statistics;
 
 import net.onrc.openvirtex.elements.datapath.PhysicalSwitch;
-import net.onrc.openvirtex.messages.OVXStatisticsReply;
+import net.onrc.openvirtex.messages.OVXStatsReply;
 
 public interface VirtualizableStatistic {
     /**
@@ -28,6 +28,6 @@ public interface VirtualizableStatistic {
      * @param msg
      *            the actual statistics message.
      */
-    public void virtualizeStatistic(PhysicalSwitch sw, OVXStatisticsReply msg);
+    public void virtualizeStatistic(PhysicalSwitch sw, OVXStatsReply msg);
 
 }

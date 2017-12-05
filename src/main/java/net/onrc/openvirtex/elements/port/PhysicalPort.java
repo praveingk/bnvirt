@@ -26,8 +26,9 @@ import net.onrc.openvirtex.db.DBManager;
 import net.onrc.openvirtex.elements.datapath.PhysicalSwitch;
 import net.onrc.openvirtex.elements.link.PhysicalLink;
 import net.onrc.openvirtex.messages.OVXPortStatus;
-import org.openflow.protocol.OFPhysicalPort;
-import org.openflow.protocol.OFPortStatus.OFPortReason;
+
+import org.projectfloodlight.openflow.protocol.OFPortDesc;
+import org.projectfloodlight.openflow.protocol.OFPortReason;
 
 /**
  * A physical port maintains the mapping of all virtual ports that are mapped to
@@ -36,7 +37,7 @@ import org.openflow.protocol.OFPortStatus.OFPortReason;
 public class PhysicalPort extends Port<PhysicalSwitch, PhysicalLink> {
 
 
-    private final Map<Integer, HashMap<Integer, OVXPort>> ovxPortMap;
+    private Map<Integer, HashMap<Integer, OVXPort>> ovxPortMap;
 
     /**
      * Instantiates a physical port based on an OpenFlow physical port.
@@ -44,7 +45,7 @@ public class PhysicalPort extends Port<PhysicalSwitch, PhysicalLink> {
      * @param port
      *            the OpenFlow physical port
      */
-    private PhysicalPort(final OFPhysicalPort port) {
+    private PhysicalPort(final OFPortDesc port) {
         super(port);
         this.ovxPortMap = new HashMap<Integer, HashMap<Integer, OVXPort>>();
     }
@@ -61,7 +62,7 @@ public class PhysicalPort extends Port<PhysicalSwitch, PhysicalLink> {
      * @param isEdge
      *            edge attribute
      */
-    public PhysicalPort(final OFPhysicalPort port, final PhysicalSwitch sw,
+    public PhysicalPort(final OFPortDesc port, final PhysicalSwitch sw,
             final boolean isEdge) {
         this(port);
         this.parentSwitch = sw;
@@ -84,18 +85,8 @@ public class PhysicalPort extends Port<PhysicalSwitch, PhysicalLink> {
         if (this.ovxPortMap.get(tenantId) == null) {
             return null;
         }
-        System.out.println("Pravein : Dumping OVX Ports for tenant "+ tenantId);
-        //System.out.println(this.ovxPortMap.get(tenantId).toString());
-
         OVXPort p = this.ovxPortMap.get(tenantId).get(vLinkId);
-
         if (p != null && !p.isActive()) {
-            if (p==null ) {
-                System.out.println("p is null");
-            }
-            if (!p.isActive()) {
-                System.out.println("p is inactive..");
-            }
             return null;
         }
         return p;
@@ -145,7 +136,7 @@ public class PhysicalPort extends Port<PhysicalSwitch, PhysicalLink> {
     public Map<String, Object> getDBObject() {
         Map<String, Object> dbObject = new HashMap<String, Object>();
         dbObject.put(TenantHandler.DPID, this.getParentSwitch().getSwitchId());
-        dbObject.put(TenantHandler.PORT, this.portNumber);
+        dbObject.put(TenantHandler.PORT, this.getPortNo());
         return dbObject;
     }
 
@@ -174,7 +165,7 @@ public class PhysicalPort extends Port<PhysicalSwitch, PhysicalLink> {
         }
 
         PhysicalPort port = (PhysicalPort) that;
-        return this.portNumber == port.portNumber
+        return this.getPortNo() == port.getPortNo()
                 && this.parentSwitch.getSwitchId() == port.getParentSwitch()
                         .getSwitchId();
     }
@@ -204,20 +195,19 @@ public class PhysicalPort extends Port<PhysicalSwitch, PhysicalLink> {
      * @param portstat
      *            the port status
      */
-    public void applyPortStatus(OVXPortStatus portstat) {
-        if (!portstat.isReason(OFPortReason.OFPPR_MODIFY)) {
-            return;
+    public PhysicalPort applyPortStatus(OVXPortStatus portstat) {
+        if (!portstat.getReason().equals(OFPortReason.MODIFY)) {
+            return null;
         }
-        OFPhysicalPort psport = portstat.getDesc();
-        this.portNumber = psport.getPortNumber();
-        this.hardwareAddress = psport.getHardwareAddress();
-        this.name = psport.getName();
-        this.config = psport.getConfig();
-        this.state = psport.getState();
-        this.currentFeatures = psport.getCurrentFeatures();
-        this.advertisedFeatures = psport.getAdvertisedFeatures();
-        this.supportedFeatures = psport.getSupportedFeatures();
-        this.peerFeatures = psport.getPeerFeatures();
+        OFPortDesc psport = portstat.getDesc();
+        PhysicalPort this_updated=new PhysicalPort(psport);
+        this_updated.mac=this.mac;
+        this_updated.isEdge=this.isEdge;
+        this_updated.parentSwitch=this.parentSwitch;
+        this_updated.portLink=this.portLink;
+        this_updated.ovxPortMap=this.ovxPortMap;
+        
+        return(this_updated);// return type changed from void to PhysicalPort (to accommodate immutability), make modifications accordingly at the calling statement.@N
     }
 
     /**

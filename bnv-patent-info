@@ -1,0 +1,41 @@
+
+****Jul 5,2017****
+Patent1 : ​
+US9602427B2
+
+Summary of this patent:
+
+1) This patent is about provisioning software defined flexi-grid optical networks.
+
+2) It slices the optical network to tenants giving them a Software Defined Optics (SDO).
+
+3) Mainly, it deals with how to allocate backup nodes optimally in order to deal with failures at run-time.
+
+How BNV is different?
+
+1) BNV is completely orthogonal to this particular patent.
+
+2) US9602427B2 patent works on virtualizing the optics transport (variable rate transponders, flexi-grid channels) for tuning them according to the specific applications. However, BNV looks into virtualization of network topologies to enable flexible topology scaling/mapping for tenants/applications. Hence, both works are completely disjoint.
+
+ 
+Patent 2: US9628339B2
+
+Summary of this patent:
+
+1) This patent is about provisioning experimental networks using server based virtualization similar to well known testbeds like emulab,  deterlab etc. 
+
+2) It emulates switching elements using a software running on the servers.
+
+3) It does not provide programmable networks to tenants.
+
+4) Due to software elements, it cannot guarantee line-rate performance.
+
+5) Does not incorporate strict traffic isolation since it uses the entire network as a fabric to implement overlay topologies.
+
+How BNV is different ?
+
+1) (Goals & Methods) BNV is about providing programmable networks to tenants using bare-metal switching hardware, while the patent in question uses server-based virtualization.   In a certain sense, BNV directly leases the hardware switch, whereas the patent uses software to simulate. To achieve such bare-metal provisioning, BNV employs a novel method (loop links and core links).
+
+2) (Performances & features) Since BNV uses the actual switch hardware, there is NO performance overhead. Please check Figure 5 & 6 in the paper, which compares the performance of BNV to software-based switching.  Furthermore, BNV assures isolation, that is, it is guaranteed that there is no interference between the tenants.
+
+3) (Implications) The guaranteed isolation provides assurance on security and networking performance, which is a major concern in many applications.

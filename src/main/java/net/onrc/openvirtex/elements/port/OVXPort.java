@@ -15,20 +15,27 @@
  ******************************************************************************/
 package net.onrc.openvirtex.elements.port;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
 import net.onrc.openvirtex.api.service.handlers.TenantHandler;
+import net.onrc.openvirtex.core.OVXFactoryInst;
 import net.onrc.openvirtex.db.DBManager;
 
-import net.onrc.openvirtex.exceptions.LinkMappingException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.openflow.protocol.OFPortStatus;
-import org.openflow.protocol.OFPhysicalPort;
-import org.openflow.protocol.OFPortStatus.OFPortReason;
+import org.projectfloodlight.openflow.protocol.OFPortStatus;
+import org.projectfloodlight.openflow.protocol.OFPortDesc;
+import org.projectfloodlight.openflow.protocol.OFPortReason;
+import org.projectfloodlight.openflow.protocol.OFPortConfig;
+import org.projectfloodlight.openflow.protocol.OFPortDesc;
+import org.projectfloodlight.openflow.protocol.OFPortState;
+import org.projectfloodlight.openflow.protocol.ver10.OFPortFeaturesSerializerVer10;
+import org.projectfloodlight.openflow.types.OFPort;
 
 import net.onrc.openvirtex.elements.OVXMap;
 import net.onrc.openvirtex.elements.datapath.OVXBigSwitch;
@@ -51,48 +58,47 @@ public class OVXPort extends Port<OVXSwitch, OVXLink> implements Persistable {
     private final Integer tenantId;
     private final PhysicalPort physicalPort;
     private boolean isActive;
-
+    static OFPortConfig[] port_config_array=new OFPortConfig[]{};
+    static Set<OFPortConfig> port_config_set=new HashSet<OFPortConfig>(Arrays.asList(port_config_array));
+    static OFPortState[] port_state_array=new OFPortState[]{OFPortState.LINK_DOWN};
+    static Set<OFPortState> port_state_set=new HashSet<OFPortState>(Arrays.asList(port_state_array));
+    
     public OVXPort(final int tenantId, final PhysicalPort port,
-            final boolean isEdge, final short portNumber)
-                    throws IndexOutOfBoundException {
-        super(port);
+            final Boolean isEdge, final short portNumber)
+                    throws IndexOutOfBoundException, SwitchMappingException {
+    	
+    	super(OFPort.of(portNumber),
+        		port.getHwAddr(), 
+        		"ovxport-" + portNumber, 
+        		port_config_set, 
+        		port_state_set, 
+        		OFPortFeaturesSerializerVer10.ofWireValue(new PortFeatures().setCurrentOVXPortFeatures().getOVXFeatures()),
+        		OFPortFeaturesSerializerVer10.ofWireValue(new PortFeatures().setAdvertisedOVXPortFeatures().getOVXFeatures()),
+        		OFPortFeaturesSerializerVer10.ofWireValue(new PortFeatures().setSupportedOVXPortFeatures().getOVXFeatures()),
+        		OFPortFeaturesSerializerVer10.ofWireValue(new PortFeatures().setPeerOVXPortFeatures().getOVXFeatures()),
+        		isEdge,
+        		OVXMap.getInstance().getVirtualSwitch(port.getParentSwitch(), tenantId));
+       
         this.tenantId = tenantId;
         this.physicalPort = port;
-        try {
-            // Pravein : API changing to New API, due to mapping of phys_dpid, port to virt_dpid.
-            System.out.println("Getting vswitch mapping of "+ Long.toHexString(physicalPort.getParentSwitch().getSwitchId().longValue()) + ", "+ physicalPort.getPortNumber());
-            this.parentSwitch = OVXMap.getInstance().getVirtualSwitch(
-                    port.getParentSwitch(),(int) physicalPort.getPortNumber(), tenantId);
+        this.isActive = false;
+        /* commented @N
+         * try {
+            
+        
         } catch (SwitchMappingException e) {
             // something pretty wrong if we get here. Not 100% on how to handle
             // this
             throw new RuntimeException("Unexpected state in OVXMap: "
                     + e.getMessage());
-        }
-        this.portNumber = portNumber;
-        this.name = "ovxport-" + this.portNumber;
-        this.isEdge = isEdge;
-        this.hardwareAddress = port.getHardwareAddress();
-        PortFeatures features = new PortFeatures();
-        features.setCurrentOVXPortFeatures();
-        this.currentFeatures = features.getOVXFeatures();
-        features.setAdvertisedOVXPortFeatures();
-        this.advertisedFeatures = features.getOVXFeatures();
-        features.setSupportedOVXPortFeatures();
-        this.supportedFeatures = features.getOVXFeatures();
-        features.setPeerOVXPortFeatures();
-        this.peerFeatures = features.getOVXFeatures();
-        this.state = OFPortState.OFPPS_LINK_DOWN.getValue();
-        this.config = OFPortConfig.OFPPC_NO_STP.getValue();
-        this.isActive = false;
+        } */
 
     }
 
     public OVXPort(final int tenantId, final PhysicalPort port,
-            final boolean isEdge) throws IndexOutOfBoundException {
-        this(tenantId, port, isEdge, (short) 0);
-        this.portNumber = this.parentSwitch.getNextPortNumber();
-        this.name = "ovxport-" + this.portNumber;
+            final boolean isEdge) throws IndexOutOfBoundException, SwitchMappingException {
+        this(tenantId, port, isEdge, OVXMap.getInstance().getVirtualSwitch(port.getParentSwitch(), tenantId).getNextPortNumber());
+      
     }
 
     public Integer getTenantId() {
@@ -104,7 +110,7 @@ public class OVXPort extends Port<OVXSwitch, OVXLink> implements Persistable {
     }
 
     public Short getPhysicalPortNumber() {
-        return this.physicalPort.getPortNumber();
+        return this.physicalPort.getPortNo().getShortPortNumber();
     }
 
     public boolean isActive() {
@@ -116,21 +122,29 @@ public class OVXPort extends Port<OVXSwitch, OVXLink> implements Persistable {
     }
 
     public void sendStatusMsg(OFPortReason reason) {
-        OFPortStatus status = new OFPortStatus();
-        status.setDesc(this);
-        status.setReason(reason.getReasonCode());
+        OFPortStatus status =OVXFactoryInst.myFactory.buildPortStatus()
+        		.setDesc(this)
+        		.setReason(reason)
+        		.build();
+        
+       
         this.parentSwitch.sendMsg(status, this.parentSwitch);
     }
 
     /**
      * Registers a port in the virtual parent switch and in the physical port.
+     * @throws SwitchMappingException 
      */
-    public void register() {
+    public void register() throws SwitchMappingException {
         this.parentSwitch.addPort(this);
         this.physicalPort.setOVXPort(this);
         if (this.parentSwitch.isActive()) {
-            sendStatusMsg(OFPortReason.OFPPR_ADD);
-            this.parentSwitch.generateFeaturesReply();
+            sendStatusMsg(OFPortReason.ADD);
+            if (OVXFactoryInst.ofversion == 10) {
+                this.parentSwitch.generateFeaturesReply();
+            } else if (OVXFactoryInst.ofversion == 13) {
+                this.parentSwitch.generateFeaturesReplyV3();
+            }
         }
         DBManager.getInstance().save(this);
     }
@@ -142,13 +156,18 @@ public class OVXPort extends Port<OVXSwitch, OVXLink> implements Persistable {
      * @param portstat the virtual port status
      */
     public void virtualizePortStat(OVXPortStatus portstat) {
-        OFPhysicalPort desc = portstat.getDesc();
-        desc.setPortNumber(this.portNumber);
-        desc.setHardwareAddress(this.hardwareAddress);
-        desc.setCurrentFeatures(this.currentFeatures);
-        desc.setAdvertisedFeatures(this.advertisedFeatures);
-        desc.setSupportedFeatures(this.supportedFeatures);
-        portstat.setDesc(desc);
+        OFPortDesc desc = portstat.getDesc();
+        desc.createBuilder().setPortNo(this.getPortNo())
+        .setHwAddr(this.getHwAddr())
+        .setCurr(this.getCurr())
+        .setAdvertised(this.getAdvertised())
+        .setSupported(this.getSupported())
+        .build();
+        portstat.createBuilder()
+        .setDesc(desc)
+        .build();
+        
+      
     }
 
     /**
@@ -156,14 +175,16 @@ public class OVXPort extends Port<OVXSwitch, OVXLink> implements Persistable {
      *
      * @param portstat the virtual port status
      */
-    public void applyPortStatus(OVXPortStatus portstat) {
-        if (portstat.getReason() != OFPortReason.OFPPR_MODIFY.getReasonCode()) {
-            return;
+    public OFPortDesc applyPortStatus(OVXPortStatus portstat) {
+        if (portstat.getReason() != OFPortReason.MODIFY) {
+            return null;
         }
-        OFPhysicalPort psport = portstat.getDesc();
-        this.config = psport.getConfig();
-        this.state = psport.getState();
-        this.peerFeatures = psport.getPeerFeatures();
+        OFPortDesc psport = portstat.getDesc();
+        OFPortDesc edited_port=this.createBuilder().setConfig(psport.getConfig())
+        .setState(psport.getState())
+        .setPeer(psport.getPeer())
+        .build();
+        return edited_port;
     }
 
     public void boot() {
@@ -171,10 +192,16 @@ public class OVXPort extends Port<OVXSwitch, OVXLink> implements Persistable {
             return;
         }
         this.isActive = true;
-        this.state = OFPortState.OFPPS_STP_FORWARD.getValue();
-        this.parentSwitch.generateFeaturesReply();
+        OFPortState[] port_state_array=new OFPortState[]{};
+        Set<OFPortState> port_state_set=new HashSet<OFPortState>(Arrays.asList(port_state_array)); 
+        this.state = port_state_set;
+        if (OVXFactoryInst.ofversion == 10) {
+            this.parentSwitch.generateFeaturesReply();
+        } else if (OVXFactoryInst.ofversion == 13) {
+            this.parentSwitch.generateFeaturesReplyV3();
+        }
         if (this.parentSwitch.isActive()) {
-            sendStatusMsg(OFPortReason.OFPPR_MODIFY);
+            sendStatusMsg(OFPortReason.MODIFY);
         }
         if (this.isLink()) {
             this.getLink().getOutLink().getDstPort().boot();
@@ -186,10 +213,15 @@ public class OVXPort extends Port<OVXSwitch, OVXLink> implements Persistable {
             return;
         }
         this.isActive = false;
-        this.state = OFPortState.OFPPS_LINK_DOWN.getValue();
-        this.parentSwitch.generateFeaturesReply();
-        if (this.parentSwitch.isActive()) {
-            sendStatusMsg(OFPortReason.OFPPR_MODIFY);
+        OFPortState[] port_state_array=new OFPortState[]{OFPortState.LINK_DOWN};
+        Set<OFPortState> port_state_set=new HashSet<OFPortState>(Arrays.asList(port_state_array)); 
+        this.state = port_state_set;
+        if (OVXFactoryInst.ofversion == 10) {
+            this.parentSwitch.generateFeaturesReply();
+        } else if (OVXFactoryInst.ofversion == 13) {
+            this.parentSwitch.generateFeaturesReplyV3();
+        }        if (this.parentSwitch.isActive()) {
+            sendStatusMsg(OFPortReason.MODIFY);
         }
         if (this.isLink()) {
             this.getLink().getOutLink().getDstPort().tearDown();
@@ -208,11 +240,11 @@ public class OVXPort extends Port<OVXSwitch, OVXLink> implements Persistable {
             log.error(
                     "Error retrieving the network with id {}. Unregister for OVXPort {}/{} not fully done!",
                     this.getTenantId(), this.getParentSwitch().getSwitchName(),
-                    this.getPortNumber());
+                    this.getPortNo());
             return;
         }
         if (this.parentSwitch.isActive()) {
-            sendStatusMsg(OFPortReason.OFPPR_DELETE);
+            sendStatusMsg(OFPortReason.DELETE);
         }
         if (this.isEdge && this.isActive) {
             Host host = virtualNetwork.getHost(this);
@@ -222,7 +254,11 @@ public class OVXPort extends Port<OVXSwitch, OVXLink> implements Persistable {
             this.getLink().ingressLink.unregister();
         }
         this.unMap();
-        this.parentSwitch.generateFeaturesReply();
+        if (OVXFactoryInst.ofversion == 10) {
+            this.parentSwitch.generateFeaturesReply();
+        } else if (OVXFactoryInst.ofversion == 13) {
+            this.parentSwitch.generateFeaturesReplyV3();
+        }
         cleanUpFlowMods();
     }
 
@@ -247,8 +283,7 @@ public class OVXPort extends Port<OVXSwitch, OVXLink> implements Persistable {
     public Map<String, Object> getDBObject() {
         Map<String, Object> dbObject = new HashMap<String, Object>();
         dbObject.putAll(this.getPhysicalPort().getDBObject());
-        dbObject.put(TenantHandler.VPORT, this.portNumber);
-        dbObject.put(TenantHandler.VDPID, this.getParentSwitch().getSwitchId());
+        dbObject.put(TenantHandler.VPORT, this.getPortNo());
         return dbObject;
     }
 
@@ -261,7 +296,7 @@ public class OVXPort extends Port<OVXSwitch, OVXLink> implements Persistable {
     }
 
     public boolean equals(final OVXPort port) {
-        return this.portNumber == port.portNumber
+        return this.getPortNo() == port.getPortNo()
                 && this.parentSwitch.getSwitchId() == port.getParentSwitch()
                 .getSwitchId();
     }
@@ -270,7 +305,7 @@ public class OVXPort extends Port<OVXSwitch, OVXLink> implements Persistable {
      * Undoes mapping for this port from the OVXSwitch and PhysicalPort.
      */
     public void unMap() {
-        this.parentSwitch.removePort(this.portNumber);
+        this.parentSwitch.removePort(this.getPortNo().getShortPortNumber());
         this.physicalPort.removeOVXPort(this);
     }
 
@@ -307,7 +342,7 @@ public class OVXPort extends Port<OVXSwitch, OVXLink> implements Persistable {
      */
     public void handlePortDelete(OVXPortStatus stat)
             throws NetworkMappingException {
-        log.debug("deleting port {}", this.getPortNumber());
+        log.debug("deleting port {}", this.getPortNo());
         handlePortDisable(stat);
         this.unregister();
     }
@@ -346,7 +381,7 @@ public class OVXPort extends Port<OVXSwitch, OVXLink> implements Persistable {
                 this.portLink.exists()) {
             OVXPort dst = this.portLink.egressLink.getDstPort();
             /* unmap vLinks and this port if DELETE */
-            if (stat.isReason(OFPortReason.OFPPR_DELETE)) {
+            if (stat.getReason().equals(OFPortReason.DELETE)) {
                 this.portLink.egressLink.unregister();
                 this.portLink.ingressLink.unregister();
             }
@@ -367,7 +402,7 @@ public class OVXPort extends Port<OVXSwitch, OVXLink> implements Persistable {
      */
     public void handleRouteDisable(OVXPortStatus stat) {
         if ((this.parentSwitch instanceof OVXBigSwitch)
-                && (stat.isReason(OFPortReason.OFPPR_DELETE))) {
+                && (stat.getReason().equals(OFPortReason.DELETE))) {
             Map<OVXPort, SwitchRoute> routes = ((OVXBigSwitch) this.parentSwitch)
                     .getRouteMap().get(this);
             if (routes != null) {
@@ -393,8 +428,7 @@ public class OVXPort extends Port<OVXSwitch, OVXLink> implements Persistable {
      */
     public void handlePortEnable(OVXPortStatus stat)
             throws NetworkMappingException {
-        log.debug("enabling port {}", this.getPortNumber());
-        //System.out.println("Enabling port.." + this.getPortNumber());
+        log.debug("enabling port {}", this.getPortNo());
         OVXNetwork virtualNetwork = this.parentSwitch.getMap()
                 .getVirtualNetwork(this.tenantId);
         Host h = virtualNetwork.getHost(this);
@@ -455,16 +489,16 @@ public class OVXPort extends Port<OVXSwitch, OVXLink> implements Persistable {
         if (isLink()) {
             linkId = this.getLink().getOutLink().getLinkId();
         }
-        return "PORT:\n- portNumber: " + this.portNumber + "\n- parentSwitch: "
+        return "PORT:\n- portNumber: " + this.getPortNo() + "\n- parentSwitch: "
         + this.getParentSwitch().getSwitchName()
         + "\n- virtualNetwork: " + this.getTenantId()
         + "\n- hardwareAddress: "
-        + MACAddress.valueOf(this.hardwareAddress).toString()
-        + "\n- config: " + this.config + "\n- state: " + this.state
-        + "\n- currentFeatures: " + this.currentFeatures
-        + "\n- advertisedFeatures: " + this.advertisedFeatures
-        + "\n- supportedFeatures: " + this.supportedFeatures
-        + "\n- peerFeatures: " + this.peerFeatures + "\n- isEdge: "
+        + this.getHwAddr().toString()
+        + "\n- config: " + this.getConfig() + "\n- state: " + this.getState()
+        + "\n- currentFeatures: " + this.getCurr()
+        + "\n- advertisedFeatures: " + this.getAdvertised()
+        + "\n- supportedFeatures: " + this.getSupported()
+        + "\n- peerFeatures: " + this.getPeer() + "\n- isEdge: "
         + this.isEdge + "\n- isActive: " + this.isActive
         + "\n- linkId: " + linkId + "\n- physicalPortNumber: "
         + this.getPhysicalPortNumber() + "\n- physicalSwitchName: "

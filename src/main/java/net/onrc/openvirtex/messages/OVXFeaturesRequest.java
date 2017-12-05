@@ -15,18 +15,9 @@
  ******************************************************************************/
 package net.onrc.openvirtex.messages;
 
-import net.onrc.openvirtex.elements.datapath.OVXSwitch;
+import org.projectfloodlight.openflow.protocol.OFFeaturesRequest;
 
-import org.openflow.protocol.OFFeaturesRequest;
-
-public class OVXFeaturesRequest extends OFFeaturesRequest implements
+public interface OVXFeaturesRequest extends OFFeaturesRequest,
         Devirtualizable {
-
-    @Override
-    public void devirtualize(final OVXSwitch sw) {
-        // TODO: Log error, we should never receive this message here
-        return;
-
-    }
 
 }

@@ -15,11 +15,13 @@
  ******************************************************************************/
 package net.onrc.openvirtex.core.io;
 
+import net.onrc.openvirtex.exceptions.SwitchMappingException;
+
 import org.jboss.netty.channel.Channel;
-import org.openflow.protocol.OFMessage;
+import org.projectfloodlight.openflow.protocol.OFMessage;
 
 public interface OVXEventHandler {
 
-    public void handleIO(OFMessage msg, Channel channel);
+    public void handleIO(OFMessage msg, Channel channel) throws SwitchMappingException;
 
 }

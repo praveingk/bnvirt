@@ -51,50 +51,37 @@ public class CreateOVXPort extends ApiHandler<Map<String, Object>> {
         JSONRPC2Response resp = null;
 
         try {
-            //System.out.println("##############PRAVEIN : Inside CreateOVXPort##################");
             final Number tenantId = HandlerUtils.<Number>fetchField(
                     TenantHandler.TENANT, params, true, null);
-            //System.out.println("Tenant id "+ tenantId.intValue());
             final Number virtdpid = HandlerUtils.<Number>fetchField(
                     TenantHandler.VDPID, params, true, null);
-           // System.out.println("Virt DPID : "+ Long.toHexString(virtdpid.longValue()));
             final Number physdpid = HandlerUtils.<Number>fetchField(
                     TenantHandler.PDPID, params, true, null);
-            //System.out.println("Phys DPID : "+ Long.toHexString(physdpid.longValue()));
             final Number port = HandlerUtils.<Number>fetchField(
                     TenantHandler.PORT, params, true, null);
-            //System.out.println("Phys DPID : "+ port.intValue());
 
             HandlerUtils.isValidTenantId(tenantId.intValue());
-            //System.out.println("Listing DPIDS");
-            //System.out.println("Virt DPID : "+ Long.toHexString(virtdpid.longValue()));
-            //System.out.println("Phys DPID : "+ Long.toHexString(physdpid.longValue()));
-            final OVXMap map = OVXMap.getInstance();
 
+
+            final OVXMap map = OVXMap.getInstance();
             final PhysicalSwitch physicalSwitch = PhysicalNetwork.getInstance()
                     .getSwitch(physdpid.longValue());
             final OVXNetwork virtualNetwork = map.getVirtualNetwork(tenantId
                     .intValue());
             final OVXSwitch virtualSwitch = virtualNetwork.getSwitch(virtdpid.longValue());
-
             if (physicalSwitch == null) {
                 System.out.println("Warning : PhysSwitch is null");
             }
-
             if (virtualSwitch == null) {
                 System.out.println("Warning : virtualSwitch is null");
             }
-
             map.addSwitchPort(physicalSwitch, port.intValue(), tenantId.intValue(), virtualSwitch);
-
             HandlerUtils.isValidPhysicalPort(tenantId.intValue(),
                     physdpid.longValue(), port.shortValue());
-
-
             System.out.println("Creating a virtual Port for "+ Long.toHexString(physdpid.longValue())+ " and port "+ port.shortValue());
             final OVXPort ovxPort = virtualNetwork.createPort(physdpid.longValue(),
                     port.shortValue());
-
+            System.out.println("ovxPort = "+ ovxPort.getPortNo().toString());
 
             if (ovxPort == null) {
                 resp = new JSONRPC2Response(
@@ -104,7 +91,7 @@ public class CreateOVXPort extends ApiHandler<Map<String, Object>> {
             } else {
                 this.log.info(
                         "Created virtual port {} on virtual switch {} in virtual network {}",
-                        ovxPort.getPortNumber(), ovxPort.getParentSwitch()
+                        ovxPort.getPortNo(), ovxPort.getParentSwitch()
                                 .getSwitchName(), virtualNetwork.getTenantId());
                 Map<String, Object> reply = new HashMap<String, Object>(
                         ovxPort.getDBObject());
@@ -150,85 +137,6 @@ public class CreateOVXPort extends ApiHandler<Map<String, Object>> {
         return resp;
     }
 
-/*
-    @Override
-    public JSONRPC2Response process(final Map<String, Object> params) {
-        JSONRPC2Response resp = null;
-
-        try {
-            final Number tenantId = HandlerUtils.<Number>fetchField(
-                    TenantHandler.TENANT, params, true, null);
-            final Number dpid = HandlerUtils.<Number>fetchField(
-                    TenantHandler.DPID, params, true, null);
-            final Number port = HandlerUtils.<Number>fetchField(
-                    TenantHandler.PORT, params, true, null);
-
-            HandlerUtils.isValidTenantId(tenantId.intValue());
-            HandlerUtils.isValidPhysicalPort(tenantId.intValue(),
-                    dpid.longValue(), port.shortValue());
-
-
-            final OVXMap map = OVXMap.getInstance();
-            final OVXNetwork virtualNetwork = map.getVirtualNetwork(tenantId
-                    .intValue());
-            final OVXPort ovxPort = virtualNetwork.createPort(dpid.longValue(),
-                    port.shortValue());
-
-
-            if (ovxPort == null) {
-                resp = new JSONRPC2Response(
-                        new JSONRPC2Error(
-                                JSONRPC2Error.INTERNAL_ERROR.getCode(),
-                                this.cmdName()), 0);
-            } else {
-                this.log.info(
-                        "Created virtual port {} on virtual switch {} in virtual network {}",
-                        ovxPort.getPortNumber(), ovxPort.getParentSwitch()
-                                .getSwitchName(), virtualNetwork.getTenantId());
-                Map<String, Object> reply = new HashMap<String, Object>(
-                        ovxPort.getDBObject());
-                reply.put(TenantHandler.VDPID, ovxPort.getParentSwitch()
-                        .getSwitchId());
-                reply.put(TenantHandler.TENANT, ovxPort.getTenantId());
-                resp = new JSONRPC2Response(reply, 0);
-            }
-
-        } catch (final MissingRequiredField e) {
-            resp = new JSONRPC2Response(new JSONRPC2Error(
-                    JSONRPC2Error.INVALID_PARAMS.getCode(), this.cmdName()
-                    + ": Unable to create virtual port : "
-                    + e.getMessage()), 0);
-        } catch (final InvalidPortException e) {
-            resp = new JSONRPC2Response(new JSONRPC2Error(
-                    JSONRPC2Error.INVALID_PARAMS.getCode(), this.cmdName()
-                    + ": Invalid port : " + e.getMessage()), 0);
-        } catch (final InvalidTenantIdException e) {
-            resp = new JSONRPC2Response(new JSONRPC2Error(
-                    JSONRPC2Error.INVALID_PARAMS.getCode(), this.cmdName()
-                    + ": Invalid tenant id : " + e.getMessage()), 0);
-        } catch (final IndexOutOfBoundException e) {
-            resp = new JSONRPC2Response(
-                    new JSONRPC2Error(
-                            JSONRPC2Error.INVALID_PARAMS.getCode(),
-                            this.cmdName()
-                                    + ": Impossible to create the virtual port, too many ports on this virtual switch : "
-                                    + e.getMessage()), 0);
-        } catch (final InvalidDPIDException e) {
-            resp = new JSONRPC2Response(new JSONRPC2Error(
-                    JSONRPC2Error.INVALID_PARAMS.getCode(), this.cmdName()
-                    + ": Invalid physical dpid : " + e.getMessage()), 0);
-        } catch (final NetworkMappingException e) {
-            resp = new JSONRPC2Response(new JSONRPC2Error(
-                    JSONRPC2Error.INVALID_PARAMS.getCode(), this.cmdName()
-                    + ": " + e.getMessage()), 0);
-        } catch (final SwitchMappingException e) {
-            resp = new JSONRPC2Response(new JSONRPC2Error(
-                    JSONRPC2Error.INVALID_PARAMS.getCode(), this.cmdName()
-                    + ": " + e.getMessage()), 0);
-        }
-        return resp;
-    }
-*/
     @Override
     public JSONRPC2ParamsType getType() {
         return JSONRPC2ParamsType.OBJECT;

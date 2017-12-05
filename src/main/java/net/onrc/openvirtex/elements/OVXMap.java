@@ -144,8 +144,6 @@ public final class OVXMap implements Mappable {
             final OVXSwitch virtualSwitch) {
         this.addPhysicalSwitch(physicalSwitch, virtualSwitch);
         this.addVirtualSwitch(virtualSwitch, physicalSwitch);
-
-        //System.out.println("Mapping "+ physicalSwitch.toString()+ "to " +virtualSwitch.toString());
     }
 
     /**
@@ -164,7 +162,6 @@ public final class OVXMap implements Mappable {
         this.physicalSwitchPortMap.put(myPSP, virtualSwitch);
         System.out.println("Mapping ("+ physicalSwitch.getSwitchName()+ ", " + port+","+ tenantID+" ):"+virtualSwitch.getSwitchName());
     }
-
 
     /**
      * Creates the mapping between PhysicalLinks and a VirtualLink. This function
@@ -458,15 +455,11 @@ public final class OVXMap implements Mappable {
             final Integer tenantId) throws SwitchMappingException {
         final ConcurrentHashMap<Integer, OVXSwitch> sws = this.physicalSwitchMap
                 .get(physicalSwitch);
-        //System.out.println("Getting virtual switch for "+ physicalSwitch.toString()  +  " and tenantid : "+ tenantId);
         if (sws == null) {
-            System.out.println("sws is null");
             throw new SwitchMappingException(physicalSwitch, OVXSwitch.class);
         }
         OVXSwitch vsw = sws.get(tenantId);
         if (vsw == null) {
-            System.out.println("vsw is null.. tenantID = "+ tenantId );
-            System.out.println(sws.toString());
             throw new SwitchMappingException(tenantId, OVXSwitch.class);
         }
         return vsw;
@@ -497,7 +490,7 @@ public final class OVXMap implements Mappable {
         OVXSwitch vsw = this.physicalSwitchPortMap.get(myPSP);
 
         if (vsw == null) {
-            throw new SwitchMappingException(tenantId, port,OVXSwitch.class);
+            throw new SwitchMappingException(tenantId, port, OVXSwitch.class);
         }
         return vsw;
     }
@@ -835,8 +828,6 @@ public final class OVXMap implements Mappable {
      * @return true if the MAC is registered, false otherwise
      */
     public boolean hasMAC(MACAddress mac) {
-        //System.out.println("MacMap : "+ this.macMap.toString());
-        //System.out.println("Checking for MAc : "+mac.toString());
         return this.macMap.getValueForExactKey(mac.toStringNoColon()) != null;
     }
 

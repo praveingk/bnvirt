@@ -21,11 +21,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.RejectedExecutionException;
 
+import net.onrc.openvirtex.core.OVXFactoryInst;
 import net.onrc.openvirtex.core.OpenVirteXController;
 import net.onrc.openvirtex.elements.OVXMap;
 import net.onrc.openvirtex.elements.datapath.OVXSwitch;
 import net.onrc.openvirtex.exceptions.ControllerStateException;
 import net.onrc.openvirtex.exceptions.HandshakeTimeoutException;
+import net.onrc.openvirtex.exceptions.SwitchMappingException;
 import net.onrc.openvirtex.exceptions.SwitchStateException;
 import net.onrc.openvirtex.messages.OVXMessageUtil;
 import net.onrc.openvirtex.packet.OVXLLDP;
@@ -40,42 +42,23 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.timeout.IdleStateEvent;
 import org.jboss.netty.handler.timeout.ReadTimeoutException;
-import org.openflow.protocol.OFBarrierReply;
-import org.openflow.protocol.OFBarrierRequest;
-import org.openflow.protocol.OFEchoReply;
-import org.openflow.protocol.OFEchoRequest;
-import org.openflow.protocol.OFError;
-import org.openflow.protocol.OFError.OFBadRequestCode;
-import org.openflow.protocol.OFError.OFErrorType;
-import org.openflow.protocol.OFFeaturesReply;
-import org.openflow.protocol.OFFeaturesRequest;
-import org.openflow.protocol.OFFlowMod;
-import org.openflow.protocol.OFGetConfigRequest;
-import org.openflow.protocol.OFHello;
-import org.openflow.protocol.OFMessage;
-import org.openflow.protocol.OFPacketOut;
-import org.openflow.protocol.OFPortMod;
-import org.openflow.protocol.OFQueueGetConfigRequest;
-import org.openflow.protocol.OFSetConfig;
-import org.openflow.protocol.OFStatisticsRequest;
-import org.openflow.protocol.OFType;
-import org.openflow.protocol.OFVendor;
-import org.openflow.protocol.factory.BasicFactory;
-import org.openflow.protocol.factory.MessageParseException;
-import org.openflow.vendor.nicira.OFNiciraVendorData;
-import org.openflow.vendor.nicira.OFRoleRequestVendorData;
+import org.projectfloodlight.openflow.exceptions.OFParseError;
+import org.projectfloodlight.openflow.protocol.*;
+import org.projectfloodlight.openflow.protocol.errormsg.OFHelloFailedErrorMsg;
+
 
 public class ControllerChannelHandler extends OFChannelHandler {
 
     private final Logger log = LogManager
             .getLogger(ControllerChannelHandler.class.getName());
 
+    int of_version = 10;
     enum ChannelState {
         INIT(false) {
 
             @Override
             void processOFError(final ControllerChannelHandler h,
-                    final OFError m) throws IOException {
+                    final OFErrorMsg m) throws IOException {
                 // This should never happen. We haven't connected to anyone
                 // yet.
 
@@ -86,9 +69,9 @@ public class ControllerChannelHandler extends OFChannelHandler {
 
             @Override
             void processOFError(final ControllerChannelHandler h,
-                    final OFError m) throws IOException {
+                    final OFErrorMsg m) throws IOException {
                 h.log.error("Error waiting for Hello (type:{}, code:{})",
-                        m.getErrorType(), m.getErrorCode());
+                        m.getErrType(),m.getData());
 
                 h.channel.disconnect();
             }
@@ -96,11 +79,26 @@ public class ControllerChannelHandler extends OFChannelHandler {
             @Override
             void processOFHello(final ControllerChannelHandler h,
                     final OFHello m) throws IOException {
-                if (m.getVersion() == OFMessage.OFP_VERSION) {
+            	 
+                 
+              
+                if (m.getVersion() == OFVersion.OF_10) {
                     h.setState(WAIT_FT_REQ);
-                } else {
+                } else if (m.getVersion() == OFVersion.OF_13) {
+                    h.setState(WAIT_FT_REQ_V3);
+                }
+                else {
                     h.log.error("Unsupported OpenFlow Version");
-                    final OFError error = new OFError();
+                    final String errmsg = "we only support version "
+                            + OFVersion.OF_13.toString()
+                            + " and you are not it";
+                    final OFHelloFailedErrorMsg error = (OFHelloFailedErrorMsg)OVXFactoryInst.myFactory.errorMsgs()
+                    		.buildHelloFailedErrorMsg()
+                    		.setCode(OFHelloFailedCode.INCOMPATIBLE)
+                    		.build();
+                    		
+                    		
+                    	/*	final OFError error = new OFError();
                     error.setErrorType(OFErrorType.OFPET_HELLO_FAILED);
                     error.setErrorCode(OFError.OFHelloFailedCode.OFPHFC_INCOMPATIBLE);
                     error.setVersion(OFMessage.OFP_VERSION);
@@ -108,7 +106,9 @@ public class ControllerChannelHandler extends OFChannelHandler {
                             + Integer.toHexString(OFMessage.OFP_VERSION)
                             + " and you are not it";
                     error.setError(errmsg.getBytes());
-                    error.setErrorIsAscii(true);
+                    error.setErrorIsAscii(true);*/
+                    
+                   
                     h.channel.disconnect();
                 }
             }
@@ -117,10 +117,10 @@ public class ControllerChannelHandler extends OFChannelHandler {
 
             @Override
             void processOFError(final ControllerChannelHandler h,
-                    final OFError m) throws IOException {
+                    final OFErrorMsg m) throws IOException {
                 h.log.error(
                         "Error waiting for Features Request (type:{}, code:{})",
-                        m.getErrorType(), m.getErrorCode());
+                        m.getErrType(), m.getData());
 
                 h.channel.disconnect();
 
@@ -129,13 +129,50 @@ public class ControllerChannelHandler extends OFChannelHandler {
             @Override
             void processOFFeaturesRequest(final ControllerChannelHandler h,
                     final OFFeaturesRequest m) {
-                final OFFeaturesReply reply = h.sw.getFeaturesReply();
+            	
+            	 
+                 OFFeaturesReply reply = h.sw.getFeaturesReply();
                 if (reply == null) {
                     h.log.error("OVXSwitch failed to return a featuresReply message: {}"
                             + h.sw.getSwitchName());
                     h.channel.disconnect();
                 }
-                reply.setXid(m.getXid());
+                reply=reply.createBuilder().setXid(m.getXid()).build();
+                //reply.setXid(m.getXid());
+                h.channel.write(Collections.singletonList(reply));
+                h.log.info("Connected dpid {} to controller {}",
+                        h.sw.getSwitchName(), h.channel.getRemoteAddress());
+                h.sw.setConnected(true);
+                h.setState(ACTIVE);
+            }
+
+        },
+        WAIT_FT_REQ_V3(false) {
+
+            @Override
+            void processOFError(final ControllerChannelHandler h,
+                                final OFErrorMsg m) throws IOException {
+                h.log.error(
+                        "Error waiting for Features Request (type:{}, code:{})",
+                        m.getErrType(), m.getData());
+
+                h.channel.disconnect();
+
+            }
+
+            @Override
+            void processOFFeaturesRequest(final ControllerChannelHandler h,
+                                          final OFFeaturesRequest m) {
+
+
+                OFFeaturesReply reply = h.sw.getFeaturesReply();
+                if (reply == null) {
+                    h.log.error("OVXSwitch failed to return a featuresReply message: {}"
+                            + h.sw.getSwitchName());
+                    h.channel.disconnect();
+                }
+                reply=reply.createBuilder().setXid(m.getXid()).build();
+                //reply.setXid(m.getXid());
                 h.channel.write(Collections.singletonList(reply));
                 h.log.info("Connected dpid {} to controller {}",
                         h.sw.getSwitchName(), h.channel.getRemoteAddress());
@@ -148,15 +185,20 @@ public class ControllerChannelHandler extends OFChannelHandler {
 
             @Override
             void processOFError(final ControllerChannelHandler h,
-                    final OFError m) throws IOException {
-                h.sw.handleIO(m, h.channel);
+                    final OFErrorMsg m) throws IOException {
+                try {
+					h.sw.handleIO(m, h.channel);
+				} catch (SwitchMappingException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} 
             }
 
             @Override
             void processOFVendor(final ControllerChannelHandler h,
-                    final OFVendor m) {
-                if (m.getVendor() == OFNiciraVendorData.NX_VENDOR_ID
-                        && m.getVendorData() instanceof OFRoleRequestVendorData) {
+                    final OFExperimenter m) {
+                if (m.getExperimenter() == 0x2320L
+                        && ((OFNiciraHeader)m).getSubtype() != 0xaL) {
                     h.sw.handleRoleIO(m, h.channel);
                 } else {
                     this.unhandledMessageReceived(h, m);
@@ -166,7 +208,7 @@ public class ControllerChannelHandler extends OFChannelHandler {
             @Override
             void processOFMessage(final ControllerChannelHandler h,
                     final OFMessage m) throws IOException {
-
+            	//System.out.println("++++++++"+m);
                 switch (m.getType()) {
                 case HELLO:
                     this.processOFHello(h, (OFHello) m);
@@ -182,8 +224,14 @@ public class ControllerChannelHandler extends OFChannelHandler {
                     break;
                 case BARRIER_REQUEST:
                     // TODO: actually implement barrier contract
-                    final OFBarrierReply breply = new OFBarrierReply();
-                    breply.setXid(m.getXid());
+
+                	 OFBarrierReply breply = (OFBarrierReply)OVXFactoryInst.myFactory
+                			 .buildBarrierReply()
+                			 .setXid(m.getXid())
+                			 .build();
+                	 
+                    /*final OFBarrierReply breply = new OFBarrierReply();
+                    breply.setXid(m.getXid());*/
                     h.channel.write(Collections.singletonList(breply));
                     break;
                 case SET_CONFIG:
@@ -194,10 +242,19 @@ public class ControllerChannelHandler extends OFChannelHandler {
                 case STATS_REQUEST:
                 case FLOW_MOD:
                 case GET_CONFIG_REQUEST:
-                    h.sw.handleIO(m, h.channel);
+                    try {
+                        //System.out.println("Got a message : "+ m.toString());
+						h.sw.handleIO(m, h.channel);
+					} catch (SwitchMappingException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} 
                     break;
-                case VENDOR:
-                    processOFVendor(h, (OFVendor) m);
+                case EXPERIMENTER:
+                    processOFVendor(h, (OFExperimenter) m);
+                    break;
+                case ROLE_REQUEST:
+                    this.processOFRoleRequest(h, (OFRoleRequest) m);
                     break;
                 case FEATURES_REPLY:
                 case FLOW_REMOVED:
@@ -215,6 +272,7 @@ public class ControllerChannelHandler extends OFChannelHandler {
             }
 
         };
+
 
         private boolean handshakeComplete = false;
 
@@ -282,19 +340,19 @@ public class ControllerChannelHandler extends OFChannelHandler {
         protected void unhandledMessageReceived(
                 final ControllerChannelHandler h, final OFMessage m) {
 
-            if (m.getType() == OFType.VENDOR) {
+           /* if (m.getType() == OFType.VENDOR) {
                 h.log.warn(
                         "Received unhandled VENDOR message, sending unsupported error: {}",
                         m);
                 OFMessage e = OVXMessageUtil.makeErrorMsg(
                         OFBadRequestCode.OFPBRC_BAD_VENDOR, m);
                 h.channel.write(Collections.singletonList(e));
-            } else {
+            } else */{
                 h.log.warn(
                         "Received unhandled message, sending bad type error: {}",
                         m);
-                OFMessage e = OVXMessageUtil.makeErrorMsg(
-                        OFBadRequestCode.OFPBRC_BAD_TYPE, m);
+             OFMessage e = OVXMessageUtil.makeErrorMsg(
+                        OFBadRequestCode.BAD_TYPE, m);
                 h.channel.write(Collections.singletonList(e));
             }
         }
@@ -322,6 +380,7 @@ public class ControllerChannelHandler extends OFChannelHandler {
          */
         void processOFMessage(final ControllerChannelHandler h,
                 final OFMessage m) throws IOException {
+        	//System.out.println("*************"+m);
             switch (m.getType()) {
             case HELLO:
                 this.processOFHello(h, (OFHello) m);
@@ -333,10 +392,10 @@ public class ControllerChannelHandler extends OFChannelHandler {
                 this.processOFEchoRequest(h, (OFEchoRequest) m);
                 break;
             case ERROR:
-                this.processOFError(h, (OFError) m);
+                this.processOFError(h, (OFErrorMsg) m);
                 break;
-            case VENDOR:
-                this.processOFVendor(h, (OFVendor) m);
+           case EXPERIMENTER:
+                this.processOFVendor(h, (OFExperimenter) m);
                 break;
             // The following messages are sent to switches. The controller
             // should never receive them
@@ -357,7 +416,7 @@ public class ControllerChannelHandler extends OFChannelHandler {
                 this.processOFBarrierRequest(h, (OFBarrierRequest) m);
                 break;
             case STATS_REQUEST:
-                this.processOFStatsRequest(h, (OFStatisticsRequest) m);
+                this.processOFStatsRequest(h, (OFStatsRequest) m);
                 break;
             case FEATURES_REQUEST:
                 this.processOFFeaturesRequest(h, (OFFeaturesRequest) m);
@@ -368,7 +427,9 @@ public class ControllerChannelHandler extends OFChannelHandler {
             case GET_CONFIG_REQUEST:
                 this.processOFGetConfigRequest(h, (OFGetConfigRequest) m);
                 break;
-
+            case ROLE_REQUEST:
+                this.processOFRoleRequest(h, (OFRoleRequest) m);
+                break;
             case FEATURES_REPLY:
             case FLOW_REMOVED:
             case PACKET_IN:
@@ -411,20 +472,33 @@ public class ControllerChannelHandler extends OFChannelHandler {
 
         void processOFEchoRequest(final ControllerChannelHandler h,
                 final OFEchoRequest m) throws IOException {
-            final OFEchoReply reply = (OFEchoReply) BasicFactory.getInstance()
+           /* final OFEchoReply reply = (OFEchoReply) BasicFactory.getInstance()
                     .getMessage(OFType.ECHO_REPLY);
             reply.setXid(m.getXid());
             reply.setPayload(m.getPayload());
-            reply.setLengthU(m.getLengthU());
+            reply.setLengthU(m.getLengthU());*/
+        	
+        	final OFEchoReply reply = (OFEchoReply)OVXFactoryInst.myFactory
+        			.buildEchoReply()
+        			.setXid(m.getXid())
+        			.setData(m.getData())
+        			.build();
+        	//System.out.println("========="+reply);
             h.channel.write(Collections.singletonList(reply));
         }
 
         void processOFFeaturesRequest(final ControllerChannelHandler h,
                 final OFFeaturesRequest m) {
             OFFeaturesReply fr = h.sw.getFeaturesReply();
-            fr.setXid(m.getXid());
+           // fr.setXid(m.getXid());
+            fr.createBuilder().setXid(m.getXid());
             h.channel.write(Collections.singletonList(fr));
         }
+
+        void processOFRoleRequest(ControllerChannelHandler h, OFRoleRequest m) {
+            h.sw.handleRoleIOV3(m, h.channel);
+        }
+
 
         void processOFEchoReply(final ControllerChannelHandler h,
                 final OFEchoReply m) throws IOException {
@@ -433,7 +507,7 @@ public class ControllerChannelHandler extends OFChannelHandler {
 
         // no default implementation for OFError
         // every state must override it
-        abstract void processOFError(ControllerChannelHandler h, OFError m)
+        abstract void processOFError(ControllerChannelHandler h, OFErrorMsg m)
                 throws IOException;
 
         void processOFPacketOut(final ControllerChannelHandler h,
@@ -457,7 +531,7 @@ public class ControllerChannelHandler extends OFChannelHandler {
         }
 
         void processOFStatsRequest(final ControllerChannelHandler h,
-                final OFStatisticsRequest m) {
+                final OFStatsRequest m) {
             this.illegalMessageReceived(h, m);
         }
 
@@ -471,7 +545,7 @@ public class ControllerChannelHandler extends OFChannelHandler {
             this.illegalMessageReceived(h, m);
         }
 
-        void processOFVendor(final ControllerChannelHandler h, final OFVendor m)
+        void processOFVendor(final ControllerChannelHandler h, final OFExperimenter m)
                 throws IOException {
 
             this.unhandledMessageReceived(h, m);
@@ -520,10 +594,23 @@ public class ControllerChannelHandler extends OFChannelHandler {
     }
 
     @Override
-    protected void sendHandShakeMessage(final OFType type) throws IOException {
-        final OFMessage m = BasicFactory.getInstance().getMessage(type);
-        m.setXid(this.handshakeTransactionIds--);
-        this.channel.write(Collections.singletonList(m));
+    protected OFMessage sendHandShakeMessage(final OFType type) throws IOException {
+//        final OFMessage m = BasicFactory.getInstance().getMessage(type);
+//        m.setXid(this.handshakeTransactionIds--);
+    	 OFMessage m=null;
+    	 
+         if(type == OFType.HELLO)
+         {
+         	m=(OFMessage) OVXFactoryInst.myFactory.buildHello().setXid(this.handshakeTransactionIds--).build();
+         	this.channel.write(Collections.singletonList(m));
+         }
+         else if(type == OFType.FEATURES_REQUEST)
+         {
+         	m=(OFMessage) OVXFactoryInst.myFactory.buildFeaturesRequest().setXid(this.handshakeTransactionIds--).build();
+         	this.channel.write(Collections.singletonList(m));
+         }
+         return m;
+   
     }
 
     @Override
@@ -537,12 +624,13 @@ public class ControllerChannelHandler extends OFChannelHandler {
          * This should be implemented with a token bucket in order to rate limit
          * the connections a little.
          */
-        if (e.getMessage() instanceof List) {
-            @SuppressWarnings("unchecked")
-            final List<OFMessage> msglist = (List<OFMessage>) e.getMessage();
+        if (e.getMessage() instanceof OFMessage) {
+           // @SuppressWarnings("unchecked")
+            //final List<OFMessage> msglist = (List<OFMessage>) e.getMessage();
 
-            for (final OFMessage ofm : msglist) {
-
+            //for (final OFMessage ofm : msglist) {
+        	OFMessage ofm=(OFMessage) e.getMessage();
+        	
                 try {
                     switch (ofm.getType()) {
                     case PACKET_OUT:
@@ -550,7 +638,7 @@ public class ControllerChannelHandler extends OFChannelHandler {
                          * Is this packet a packet out? If yes is it an lldp?
                          * then send it to the OVXNetwork.
                          */
-                        final byte[] data = ((OFPacketOut) ofm).getPacketData();
+                       final byte[] data = ((OFPacketOut) ofm).getData();
                         if (data.length >= 14) {
                             final int tenantId = ((OVXSwitch) this.sw)
                                     .getTenantId();
@@ -575,7 +663,7 @@ public class ControllerChannelHandler extends OFChannelHandler {
                 }
             }
 
-        } else {
+         else {
             Channels.fireExceptionCaught(this.channel, new AssertionError(
                     "Message received from Channel is not a list"));
         }
@@ -584,8 +672,18 @@ public class ControllerChannelHandler extends OFChannelHandler {
     @Override
     public void channelIdle(final ChannelHandlerContext ctx,
             final IdleStateEvent e) throws Exception {
-        final OFMessage m = BasicFactory.getInstance().getMessage(
-                OFType.ECHO_REQUEST);
+//        final OFMessage m = BasicFactory.getInstance().getMessage(
+//                OFType.ECHO_REQUEST);
+    	
+    	
+
+    	
+        
+        final OFEchoRequest m = (OFEchoRequest) OVXFactoryInst.myFactory
+       		 .buildEchoRequest()
+       		 .setXid(this.handshakeTransactionIds--)
+       		 .build(); 
+        
         e.getChannel().write(Collections.singletonList(m));
     }
 
@@ -625,7 +723,7 @@ public class ControllerChannelHandler extends OFChannelHandler {
             this.log.error("Disconnecting ctrl {} due to switch state error",
                     this.getSwitchInfoString(), e.getCause());
             ctx.getChannel().close();
-        } else if (e.getCause() instanceof MessageParseException) {
+        } else if (e.getCause() instanceof OFParseError) {
             this.log.error(
                     "Disconnecting ctrl {} due to message parse failure",
                     this.getSwitchInfoString(), e.getCause());

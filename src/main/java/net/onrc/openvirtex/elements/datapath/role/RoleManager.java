@@ -18,7 +18,6 @@ package net.onrc.openvirtex.elements.datapath.role;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-
 import java.util.concurrent.atomic.AtomicReference;
 
 import net.onrc.openvirtex.exceptions.UnknownRoleException;
@@ -26,8 +25,10 @@ import net.onrc.openvirtex.exceptions.UnknownRoleException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jboss.netty.channel.Channel;
-import org.openflow.protocol.OFMessage;
-import org.openflow.vendor.nicira.OFRoleVendorData;
+import org.projectfloodlight.openflow.protocol.OFMessage;
+import org.projectfloodlight.openflow.protocol.OFType;
+import org.projectfloodlight.openflow.protocol.ver10.OFNiciraControllerRoleSerializerVer10;
+
 
 public class RoleManager {
 
@@ -38,9 +39,9 @@ public class RoleManager {
     private Channel currentMaster;
 
     public static enum Role {
-        EQUAL(OFRoleVendorData.NX_ROLE_OTHER), MASTER(
-                OFRoleVendorData.NX_ROLE_MASTER), SLAVE(
-                OFRoleVendorData.NX_ROLE_SLAVE);
+        EQUAL(OFNiciraControllerRoleSerializerVer10.ROLE_OTHER_VAL), MASTER(
+        		OFNiciraControllerRoleSerializerVer10.ROLE_MASTER_VAL), SLAVE(
+        				OFNiciraControllerRoleSerializerVer10.ROLE_SLAVE_VAL);
 
         private final int nxRole;
 
@@ -137,7 +138,8 @@ public class RoleManager {
         if (r == Role.MASTER || r == Role.EQUAL) {
             return true;
         }
-        switch (m.getType()) {
+        OFType type=m.getType();
+        switch (type) {
         case GET_CONFIG_REQUEST:
         case QUEUE_GET_CONFIG_REQUEST:
         case PORT_STATUS:

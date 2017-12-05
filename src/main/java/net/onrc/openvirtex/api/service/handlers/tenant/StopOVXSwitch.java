@@ -36,7 +36,7 @@ import com.thetransactioncompany.jsonrpc2.JSONRPC2Error;
 import com.thetransactioncompany.jsonrpc2.JSONRPC2ParamsType;
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Response;
 
-public class    StopOVXSwitch extends ApiHandler<Map<String, Object>> {
+public class StopOVXSwitch extends ApiHandler<Map<String, Object>> {
     Logger log = LogManager.getLogger(StopOVXSwitch.class.getName());
 
     @Override

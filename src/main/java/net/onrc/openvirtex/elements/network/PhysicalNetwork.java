@@ -28,13 +28,14 @@ import net.onrc.openvirtex.elements.datapath.PhysicalSwitch;
 import net.onrc.openvirtex.elements.datapath.Switch;
 import net.onrc.openvirtex.elements.link.PhysicalLink;
 import net.onrc.openvirtex.elements.port.PhysicalPort;
+import net.onrc.openvirtex.exceptions.SwitchMappingException;
 import net.onrc.openvirtex.linkdiscovery.SwitchDiscoveryManager;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jboss.netty.util.HashedWheelTimer;
-import org.openflow.protocol.OFMessage;
-import org.openflow.protocol.OFPort;
+import org.projectfloodlight.openflow.protocol.OFMessage;
+import org.projectfloodlight.openflow.types.OFPort;
 
 /**
  *
@@ -93,9 +94,10 @@ public final class PhysicalNetwork extends
      * Add physical switch to topology and make it discoverable.
      *
      * @param sw the switch
+     * @throws SwitchMappingException 
      */
     @Override
-    public synchronized void addSwitch(final PhysicalSwitch sw) {
+    public synchronized void addSwitch(final PhysicalSwitch sw) throws SwitchMappingException {
         super.addSwitch(sw);
         this.discoveryManager.put(sw.getSwitchId(), new SwitchDiscoveryManager(
                 sw, OpenVirteXController.getInstance().getUseBDDP()));
@@ -123,19 +125,22 @@ public final class PhysicalNetwork extends
 
     /**
      * Adds port for discovery.
+     *
      * @param port the port
+     * @throws SwitchMappingException 
      */
-    public synchronized void addPort(final PhysicalPort port) {
+    public synchronized void addPort(final PhysicalPort port) throws SwitchMappingException {
         SwitchDiscoveryManager sdm = this.discoveryManager.get(port
                 .getParentSwitch().getSwitchId());
         if (sdm != null) {
             // Do not run discovery on local OpenFlow port
-            if (port.getPortNumber() != OFPort.OFPP_LOCAL.getValue()) {
+        	final short OFPP_LOCAL_SHORT = (short) 0xFFfe;
+            if (port.getPortNo().getShortPortNumber() != OFPP_LOCAL_SHORT) {
                 sdm.addPort(port);
             }
         }
         DBManager.getInstance().addPort(port.toDPIDandPort());
-        System.out.println("Adding Port : "+port.getPortNumber());
+        System.out.println("Adding Port : "+port.getPortNo().getPortNumber());
     }
 
     /**
@@ -150,9 +155,10 @@ public final class PhysicalNetwork extends
         port.unregister();
         /* remove from topology discovery */
         if (sdm != null) {
-            log.info("removing port {}", port.getPortNumber());
+            log.info("removing port {}", port.getPortNo());
             // Do not run discovery on local OpenFlow port
-            if (port.getPortNumber() != OFPort.OFPP_LOCAL.getValue()) {
+            final short OFPP_LOCAL_SHORT = (short) 0xFFfe;
+            if (port.getPortNo().getShortPortNumber() != OFPP_LOCAL_SHORT) {
                 sdm.removePort(port);
             }
         }
@@ -168,28 +174,26 @@ public final class PhysicalNetwork extends
      *
      * @param srcPort source port
      * @param dstPort destination port
+     * @throws SwitchMappingException 
      */
     public synchronized void createLink(final PhysicalPort srcPort,
-            final PhysicalPort dstPort) {
+            final PhysicalPort dstPort) throws SwitchMappingException {
         final PhysicalPort neighbourPort = this.getNeighborPort(srcPort);
         if (neighbourPort == null || !neighbourPort.equals(dstPort)) {
             final PhysicalLink link = new PhysicalLink(srcPort, dstPort);
             OVXMap.getInstance().knownLink(link);
             super.addLink(link);
-            System.out.println("Adding a physical link b/w "+ link.getSrcSwitch().getSwitchName()+":"+ link.getSrcPort().getPortNumber()
-                    +" and "+ link.getDstSwitch().getSwitchName()+":"+link.getDstPort().getPortNumber());
+            System.out.println("Adding a physical link b/w "+ link.getSrcSwitch().getSwitchName()+":"+ link.getSrcPort().getPortNo().getPortNumber()
+                    +" and "+ link.getDstSwitch().getSwitchName()+":"+link.getDstPort().getPortNo().getPortNumber());
             log.info("Adding physical link between {}/{} and {}/{}", link
                     .getSrcSwitch().getSwitchName(), link.getSrcPort()
-                    .getPortNumber(), link.getDstSwitch().getSwitchName(), link
-                    .getDstPort().getPortNumber());
+                    .getPortNo(), link.getDstSwitch().getSwitchName(), link
+                    .getDstPort().getPortNo());
             DPIDandPortPair dpp = new DPIDandPortPair(new DPIDandPort(srcPort
-                    .getParentSwitch().getSwitchId(), srcPort.getPortNumber()),
+                    .getParentSwitch().getSwitchId(), srcPort.getPortNo()),
                     new DPIDandPort(dstPort.getParentSwitch().getSwitchId(),
-                            dstPort.getPortNumber()));
+                            dstPort.getPortNo()));
             DBManager.getInstance().addLink(dpp);
-            System.out.println("Neighbor ports..");
-            System.out.println(this.getNeighborPort(srcPort));
-            System.out.println(this.getNeighborPort(dstPort));
         }
     }
 
@@ -205,15 +209,15 @@ public final class PhysicalNetwork extends
         if ((neighbourPort != null) && (neighbourPort.equals(dstPort))) {
             final PhysicalLink link = super.getLink(srcPort, dstPort);
             DPIDandPortPair dpp = new DPIDandPortPair(new DPIDandPort(srcPort
-                    .getParentSwitch().getSwitchId(), srcPort.getPortNumber()),
+                    .getParentSwitch().getSwitchId(), srcPort.getPortNo()),
                     new DPIDandPort(dstPort.getParentSwitch().getSwitchId(),
-                            dstPort.getPortNumber()));
+                            dstPort.getPortNo()));
             DBManager.getInstance().delLink(dpp);
             super.removeLink(link);
             log.info("Removing physical link between {}/{} and {}/{}", link
                     .getSrcSwitch().getSwitchName(), link.getSrcPort()
-                    .getPortNumber(), link.getDstSwitch().getSwitchName(), link
-                    .getDstPort().getPortNumber());
+                    .getPortNo(), link.getDstSwitch().getSwitchName(), link
+                    .getDstPort().getPortNo());
         }
     }
 
@@ -235,11 +239,12 @@ public final class PhysicalNetwork extends
      * SwitchDisoveryManager (which sent the original LLDP packet).
      *
      * @param msg the LLDP packet in
-     * @param sw the Switch
+     * @param  sw
+     * @throws SwitchMappingException 
      */
     @SuppressWarnings("rawtypes")
     @Override
-    public void handleLLDP(final OFMessage msg, final Switch sw) {
+    public void handleLLDP(final OFMessage msg, final Switch sw) throws SwitchMappingException {
         // Pass msg to appropriate SwitchDiscoveryManager
         final SwitchDiscoveryManager sdm = this.discoveryManager.get(sw
                 .getSwitchId());
@@ -263,7 +268,6 @@ public final class PhysicalNetwork extends
         System.out.println("Physical Network is Booted..");
         return true;
     }
-
     public void initializeLoopPorts() {
         if (!LoopNetwork.isInitialized) {
             System.out.println("Initializing Loop ports..");

@@ -18,65 +18,64 @@ package net.onrc.openvirtex.protocol;
 import java.util.HashMap;
 
 import net.onrc.openvirtex.elements.address.IPMapper;
-import net.onrc.openvirtex.messages.actions.OVXActionNetworkLayerDestination;
-import net.onrc.openvirtex.messages.actions.OVXActionNetworkLayerSource;
+import net.onrc.openvirtex.messages.actions.ver10.OVXActionNetworkLayerDestinationVer10;
+import net.onrc.openvirtex.messages.actions.ver10.OVXActionNetworkLayerSourceVer10;
 
-import org.openflow.protocol.OFMatch;
-import org.openflow.protocol.Wildcards.Flag;
-import org.openflow.protocol.action.OFAction;
-import org.openflow.util.HexString;
-import org.openflow.util.U16;
-import org.openflow.util.U8;
+import org.projectfloodlight.openflow.protocol.OFMatchV1;
+import org.projectfloodlight.openflow.protocol.ver10.OFMatchV1Ver10;
+import org.projectfloodlight.openflow.protocol.action.OFAction;
+import org.projectfloodlight.openflow.util.HexString;
+import org.projectfloodlight.openflow.types.U16;
+import org.projectfloodlight.openflow.types.U8;
+import org.projectfloodlight.openflow.protocol.match.MatchField;
+import org.projectfloodlight.openflow.types.EthType;
+import org.projectfloodlight.openflow.types.IPv4Address;
+import org.projectfloodlight.openflow.types.IpDscp;
+import org.projectfloodlight.openflow.types.IpProtocol;
+import org.projectfloodlight.openflow.types.MacAddress;
+import org.projectfloodlight.openflow.types.OFPort;
+import org.projectfloodlight.openflow.types.OFVlanVidMatch;
+import org.projectfloodlight.openflow.types.TransportPort;
+import org.projectfloodlight.openflow.types.VlanPcp;
 
 /**
- * The Class OVXMatch. This class extends the OFMatch class, in order to carry
+ * The Class OVXMatch. This class extends the OFMatchV1 class, in order to carry
  * some useful informations for OpenVirteX, as the cookie (used by flowMods
  * messages) and the packet data (used by packetOut messages)
  */
-public class OVXMatch extends OFMatch {
+public class OVXMatch extends OFMatchV1Ver10 {
 
     /** The Constant serialVersionUID. */
     private static final long serialVersionUID = 1L;
 
     /** The cookie. */
-    protected long cookie;
+    protected long cookie=0;
 
     /** The pkt data. */
-    protected byte[] pktData;
+    protected byte[] pktData=null;
 
     /**
      * Instantiates a new void OVXatch.
      */
-    public OVXMatch() {
-        super();
-        this.cookie = 0;
-        this.pktData = null;
+    public OVXMatch(int wildcards, OFPort inPort, MacAddress ethSrc, MacAddress ethDst, OFVlanVidMatch vlanVid, VlanPcp vlanPcp, EthType ethType, IpDscp ipDscp, IpProtocol ipProto, IPv4Address ipv4Src, IPv4Address ipv4Dst, TransportPort tcpSrc, TransportPort tcpDst,long cookie,byte[] pktData) 
+    {
+        super(wildcards, inPort, ethSrc, ethDst, vlanVid, vlanPcp, ethType, ipDscp, ipProto, ipv4Src, ipv4Dst, tcpDst, tcpDst);
+        this.cookie = cookie;
+        this.pktData = pktData;
     }
 
     /**
-     * Instantiates a new OVXmatch from an OFMatch instance.
+     * Instantiates a new OVXmatch from an OFMatchV1 instance.
      *
      * @param match
      *            the match
      */
-    public OVXMatch(final OFMatch match) {
-        this.wildcards = match.getWildcards();
-        this.inputPort = match.getInputPort();
-        this.dataLayerSource = match.getDataLayerSource();
-        this.dataLayerDestination = match.getDataLayerDestination();
-        this.dataLayerVirtualLan = match.getDataLayerVirtualLan();
-        this.dataLayerVirtualLanPriorityCodePoint = match
-                .getDataLayerVirtualLanPriorityCodePoint();
-        this.dataLayerType = match.getDataLayerType();
-        this.networkTypeOfService = match.getNetworkTypeOfService();
-        this.networkProtocol = match.getNetworkProtocol();
-        this.networkSource = match.getNetworkSource();
-        this.networkDestination = match.getNetworkDestination();
-        this.transportSource = match.getTransportSource();
-        this.transportDestination = match.getTransportDestination();
-        this.cookie = 0;
-        this.pktData = null;
+    public OVXMatch(final OFMatchV1 match) {
+    	this(match.getWildcards(), match.getInPort(), match.getEthSrc(), match.getEthDst(), match.getVlanVid(), match.getVlanPcp(), match.getEthType(), match.getIpDscp(), match.getIpProto(), match.getIpv4Src(), match.getIpv4Dst(), match.getTcpDst(), match.getTcpDst(),0,null);
+        
     }
+
+
 
     /**
      * Get cookie.
@@ -141,83 +140,123 @@ public class OVXMatch extends OFMatch {
         public static String cidrToString(final int ip, final int prefix) {
             String str;
             if (prefix >= 32) {
-                str = OFMatch.ipToString(ip);
+                str = IPv4Address.of(ip).toString();
             } else {
                 // use the negation of mask to fake endian magic
                 final int mask = ~((1 << 32 - prefix) - 1);
-                str = OFMatch.ipToString(ip & mask) + "/" + prefix;
+                str = IPv4Address.of(ip & mask).toString() + "/" + prefix;
             }
 
             return str;
         }
     }
-
+    /* List of Strings for marshalling and unmarshalling to human readable forms */
+    final public static String STR_IN_PORT = "in_port";
+    final public static String STR_DL_DST = "dl_dst";
+    final public static String STR_DL_SRC = "dl_src";
+    final public static String STR_DL_TYPE = "dl_type";
+    final public static String STR_DL_VLAN = "dl_vlan";
+    final public static String STR_DL_VLAN_PCP = "dl_vlan_pcp";
+    final public static String STR_NW_DST = "nw_dst";
+    final public static String STR_NW_SRC = "nw_src";
+    final public static String STR_NW_PROTO = "nw_proto";
+    final public static String STR_NW_TOS = "nw_tos";
+    final public static String STR_TP_DST = "tp_dst";
+    final public static String STR_TP_SRC = "tp_src";
+    
     public HashMap<String, Object> toMap() {
 
         final HashMap<String, Object> ret = new HashMap<String, Object>();
 
-        ret.put("wildcards", this.wildcards);
+        ret.put("wildcards", this.getWildcards());
 
         // l1
-        if ((this.wildcards & OFMatch.OFPFW_IN_PORT) == 0) {
-            ret.put(OFMatch.STR_IN_PORT, U16.f(this.inputPort));
+        if ((this.getWildcards() & OFMatchV1Ver10.OFPFW_IN_PORT) == 0) {
+            ret.put(STR_IN_PORT, U16.f(this.getInPort().getShortPortNumber()));
         }
 
         // l2
-        if ((this.wildcards & OFMatch.OFPFW_DL_DST) == 0) {
-            ret.put(OFMatch.STR_DL_DST,
-                    HexString.toHexString(this.dataLayerDestination));
+        if ((this.getWildcards() & OFMatchV1Ver10.OFPFW_DL_DST) == 0) {
+            ret.put(STR_DL_DST,
+                    HexString.toHexString(this.getEthDst().getBytes()));
         }
 
-        if ((this.wildcards & OFMatch.OFPFW_DL_SRC) == 0) {
-            ret.put(OFMatch.STR_DL_SRC,
-                    HexString.toHexString(this.dataLayerSource));
+        if ((this.getWildcards() & OFMatchV1Ver10.OFPFW_DL_SRC) == 0) {
+            ret.put(STR_DL_SRC,
+                    HexString.toHexString(this.getEthSrc().getBytes()));
         }
 
-        if ((this.wildcards & OFMatch.OFPFW_DL_TYPE) == 0) {
-            ret.put(OFMatch.STR_DL_TYPE, U16.f(this.dataLayerType));
+        if ((this.getWildcards() & OFMatchV1Ver10.OFPFW_DL_TYPE) == 0) {
+            ret.put(STR_DL_TYPE, this.getEthType().getValue());
         }
 
-        if ((this.wildcards & OFMatch.OFPFW_DL_VLAN) == 0) {
-            ret.put(OFMatch.STR_DL_VLAN, U16.f(this.dataLayerVirtualLan));
+        if ((this.getWildcards() & OFMatchV1Ver10.OFPFW_DL_VLAN) == 0) {
+            ret.put(STR_DL_VLAN, U16.f(this.getVlanVid().getRawVid()));
         }
 
-        if ((this.wildcards & OFMatch.OFPFW_DL_VLAN_PCP) == 0) {
-            ret.put(OFMatch.STR_DL_VLAN_PCP,
-                    U8.f(this.dataLayerVirtualLanPriorityCodePoint));
+        if ((this.getWildcards() & OFMatchV1Ver10.OFPFW_DL_VLAN_PCP) == 0) {
+            ret.put(STR_DL_VLAN_PCP,
+                    U8.f(this.getVlanPcp().getValue()));
         }
 
         // l3
-        if (this.getNetworkDestinationMaskLen() > 0) {
-            ret.put(OFMatch.STR_NW_DST,
-                    CIDRToIP.cidrToString(this.networkDestination,
-                            this.getNetworkDestinationMaskLen()));
+        if (this.getIpv4DstCidrMaskLen() > 0) {
+            ret.put(STR_NW_DST,
+                    CIDRToIP.cidrToString(this.getIpv4Dst().getInt(),
+                            this.getIpv4DstCidrMaskLen()));
         }
 
-        if (this.getNetworkSourceMaskLen() > 0) {
-            ret.put(OFMatch.STR_NW_SRC,
-                    CIDRToIP.cidrToString(this.networkSource,
-                            this.getNetworkSourceMaskLen()));
+        if (this.getIpv4DstCidrMaskLen() > 0) {
+            ret.put(STR_NW_SRC,
+                    CIDRToIP.cidrToString(this.getIpv4Src().getInt(),
+                            this.getIpv4SrcCidrMaskLen()));
         }
 
-        if ((this.wildcards & OFMatch.OFPFW_NW_PROTO) == 0) {
-            ret.put(OFMatch.STR_NW_PROTO, this.networkProtocol);
+        if ((this.getWildcards() & OFMatchV1Ver10.OFPFW_NW_PROTO) == 0) {
+            ret.put(STR_NW_PROTO, this.getIpProto());
         }
 
-        if ((this.wildcards & OFMatch.OFPFW_NW_TOS) == 0) {
-            ret.put(OFMatch.STR_NW_TOS, this.networkTypeOfService);
+        if ((this.getWildcards() & OFMatchV1Ver10.OFPFW_NW_TOS) == 0) {
+            ret.put(STR_NW_TOS, this.getIpDscp());
         }
 
         // l4
-        if ((this.wildcards & OFMatch.OFPFW_TP_DST) == 0) {
-            ret.put(OFMatch.STR_TP_DST, this.transportDestination);
+        if ((this.getWildcards() & OFMatchV1Ver10.OFPFW_TP_DST) == 0) {
+            ret.put(STR_TP_DST, this.getTcpDst());
         }
 
-        if ((this.wildcards & OFMatch.OFPFW_TP_SRC) == 0) {
-            ret.put(OFMatch.STR_TP_SRC, this.transportSource);
+        if ((this.getWildcards() & OFMatchV1Ver10.OFPFW_TP_SRC) == 0) {
+            ret.put(STR_TP_SRC, this.getTcpSrc());
         }
 
         return ret;
     }
 
+	/**
+	 * Return an OFAction associated with nw_src
+	 *
+	 * @param tenantId
+	 * @return OFAction or null
+	 */
+	public OFAction getNetworkSrcAction(int tenantId) {
+		OVXActionNetworkLayerSourceVer10 srcAct = null;
+		if (!this.isFullyWildcarded(MatchField.IPV4_SRC)) {
+			srcAct = new OVXActionNetworkLayerSourceVer10(IPv4Address.of(IPMapper.getPhysicalIp(tenantId, this.getIpv4Src().getInt())));
+		}
+		return srcAct;
+	}
+
+	/**
+	 * Return an OFAction associated with nw_dst
+	 *
+	 * @param tenantId
+	 * @return OFAction or null
+	 */
+	public OFAction getNetworkDstAction(int tenantId) {
+		OVXActionNetworkLayerDestinationVer10 dstAct = null;
+		if (!this.isFullyWildcarded(MatchField.IPV4_DST)) {
+			dstAct = new OVXActionNetworkLayerDestinationVer10(IPv4Address.of(IPMapper.getPhysicalIp(tenantId, this.getIpv4Dst().getInt())));
+		}
+		return dstAct;
+	}
 }

@@ -25,7 +25,7 @@ import org.kohsuke.args4j.CmdLineParser;
 
 public final class OpenVirteX {
 
-    public static final String VERSION = "BNV-1.0.1";
+    public static final String VERSION = "BNV-2.0.1";
     private static Logger log = LogManager.getLogger(OpenVirteX.class.getName());
 
     /**
@@ -51,7 +51,7 @@ public final class OpenVirteX {
         }
 
         final OpenVirteXController ctrl = new OpenVirteXController(settings);
-        OpenVirteX.log.info("Starting BNV-1.0.1 (NCL)");
+        OpenVirteX.log.info("Starting BNV-2.0.1");
         ctrl.run();
     }
 

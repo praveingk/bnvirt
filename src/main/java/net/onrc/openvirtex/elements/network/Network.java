@@ -28,9 +28,10 @@ import net.onrc.openvirtex.elements.datapath.Switch;
 import net.onrc.openvirtex.elements.link.Link;
 import net.onrc.openvirtex.elements.port.Port;
 import net.onrc.openvirtex.exceptions.InvalidDPIDException;
+import net.onrc.openvirtex.exceptions.SwitchMappingException;
 import net.onrc.openvirtex.linkdiscovery.LLDPEventHandler;
 
-import org.openflow.util.HexString;
+import org.projectfloodlight.openflow.util.HexString;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
@@ -118,8 +119,9 @@ public abstract class Network<T1 extends Switch, T2 extends Port, T3 extends Lin
      * Adds switch to topology.
      *
      * @param sw the switch
+     * @throws SwitchMappingException 
      */
-    protected void addSwitch(final T1 sw) {
+    protected void addSwitch(final T1 sw) throws SwitchMappingException {
         if (this.switchSet.add(sw)) {
             this.dpidMap.put(sw.getSwitchId(), sw);
             this.neighborMap.put(sw, new HashSet<T1>());
@@ -181,8 +183,6 @@ public abstract class Network<T1 extends Switch, T2 extends Port, T3 extends Lin
      * @return the neighbour port
      */
     public T2 getNeighborPort(final T2 port) {
-//        System.out.println("Getting NeighborPort map");
-//        System.out.println(this.neighborPortMap.toString());
         return this.neighborPortMap.get(port);
     }
 

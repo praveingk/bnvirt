@@ -24,13 +24,14 @@ import net.onrc.openvirtex.core.io.OVXSendMsg;
 import net.onrc.openvirtex.elements.Mappable;
 import net.onrc.openvirtex.elements.OVXMap;
 import net.onrc.openvirtex.elements.port.Port;
-import net.onrc.openvirtex.messages.statistics.OVXDescriptionStatistics;
+import net.onrc.openvirtex.exceptions.SwitchMappingException;
+import net.onrc.openvirtex.messages.statistics.OVXDescStatsReply;
+import net.onrc.openvirtex.messages.statistics.ver10.OVXDescStatsReplyVer10;
+import net.onrc.openvirtex.messages.statistics.ver10.OVXDescStatsRequestVer10;
 
 import org.jboss.netty.channel.Channel;
-import org.openflow.protocol.OFFeaturesReply;
-import org.openflow.protocol.OFMessage;
-import org.openflow.protocol.OFVendor;
-import org.openflow.util.HexString;
+import org.projectfloodlight.openflow.protocol.*;
+import org.projectfloodlight.openflow.util.HexString;
 
 /**
  * The Class Switch.
@@ -49,7 +50,7 @@ public abstract class Switch<T extends Port> implements OVXEventHandler,
     // The channel descriptor
     protected Channel channel = null;
     // The description of OXV stats
-    protected OVXDescriptionStatistics desc = null;
+    protected OFDescStatsReply desc = null;
     // The switch name (converted from the DPID)
     protected String switchName = null;
     protected Mappable map = null;
@@ -63,6 +64,10 @@ public abstract class Switch<T extends Port> implements OVXEventHandler,
     /** The features reply message. */
     protected OFFeaturesReply featuresReply = null;
 
+    /** Pravein: The Port Desc reply message */
+    protected OFPortDescStatsReply portDescStatsReply = null;
+
+    protected int ofversion = 10;
     /** The switch id (DPID). */
     protected Long switchId = (long) 0;
 
@@ -80,6 +85,7 @@ public abstract class Switch<T extends Port> implements OVXEventHandler,
         this.switchName = HexString.toHexString(this.switchId);
         this.portMap = new HashMap<Short, T>();
         this.featuresReply = null;
+        this.portDescStatsReply = null;
         this.map = OVXMap.getInstance();
     }
 
@@ -113,6 +119,12 @@ public abstract class Switch<T extends Port> implements OVXEventHandler,
     public void setFeaturesReply(final OFFeaturesReply m) {
         this.featuresReply = m;
     }
+
+    public void setPortDescStatsReply (final OFPortDescStatsReply m) {
+        this.portDescStatsReply = m;
+    }
+
+    public void setOfversion(int ofversion) { this.ofversion = ofversion;}
 
     /**
      * Gets the switch id.
@@ -149,12 +161,13 @@ public abstract class Switch<T extends Port> implements OVXEventHandler,
      * @param port
      *            the port instance
      * @return true, if successful
+     * @throws SwitchMappingException 
      */
-    public boolean addPort(final T port) {
-        if (this.portMap.containsKey(port.getPortNumber())) {
+    public boolean addPort(final T port) throws SwitchMappingException {
+        if (this.portMap.containsKey(port.getPortNo())) {
             return false;
         }
-        this.portMap.put(port.getPortNumber(), port);
+        this.portMap.put(port.getPortNo().getShortPortNumber(), port);
         return true;
     }
 
@@ -181,9 +194,11 @@ public abstract class Switch<T extends Port> implements OVXEventHandler,
      * .OFMessage)
      */
     @Override
-    public abstract void handleIO(OFMessage msg, Channel channel);
+    public abstract void handleIO(OFMessage msg, Channel channel) throws SwitchMappingException;
 
-    public abstract void handleRoleIO(OFVendor msg, Channel channel);
+    public abstract void handleRoleIO(OFExperimenter msg, Channel channel);
+
+    public abstract void handleRoleIOV3(OFRoleRequest msg, Channel channel);
 
     /**
      * Sets the connected.
@@ -210,8 +225,9 @@ public abstract class Switch<T extends Port> implements OVXEventHandler,
      * Starts up the switch.
      *
      * @return true upon success startup.
+     * @throws SwitchMappingException 
      */
-    public abstract boolean boot();
+    public abstract boolean boot() throws SwitchMappingException;
 
     /**
      * Removes the switch from the network representation. Removal may be
@@ -231,7 +247,7 @@ public abstract class Switch<T extends Port> implements OVXEventHandler,
      * @param description
      *            the new description stats
      */
-    public void setDescriptionStats(final OVXDescriptionStatistics description) {
+    public void setDescriptionStats(final OFDescStatsReply description) {
         this.desc = description;
 
     }

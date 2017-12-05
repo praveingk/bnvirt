@@ -17,8 +17,10 @@ package net.onrc.openvirtex.elements.port;
 
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Set;
 
 import net.onrc.openvirtex.api.service.handlers.TenantHandler;
+import net.onrc.openvirtex.core.OVXFactoryInst;
 import net.onrc.openvirtex.elements.Persistable;
 import net.onrc.openvirtex.elements.datapath.DPIDandPort;
 import net.onrc.openvirtex.elements.datapath.Switch;
@@ -28,7 +30,15 @@ import java.util.Arrays;
 
 import net.onrc.openvirtex.util.MACAddress;
 
-import org.openflow.protocol.OFPhysicalPort;
+import org.projectfloodlight.openflow.protocol.ver10.OFPortConfigSerializerVer10;
+import org.projectfloodlight.openflow.protocol.ver10.OFPortDescVer10;
+import org.projectfloodlight.openflow.protocol.ver10.OFPortFeaturesSerializerVer10;
+import org.projectfloodlight.openflow.types.MacAddress;
+import org.projectfloodlight.openflow.types.OFPort;
+import org.projectfloodlight.openflow.protocol.OFPortConfig;
+import org.projectfloodlight.openflow.protocol.OFPortDesc;
+import org.projectfloodlight.openflow.protocol.OFPortFeatures;
+import org.projectfloodlight.openflow.protocol.OFPortState;
 
 /**
  * The Class Port.
@@ -41,7 +51,7 @@ import org.openflow.protocol.OFPhysicalPort;
 
 @SuppressWarnings("rawtypes")
 
-public class Port<T1 extends Switch, T2 extends Link> extends OFPhysicalPort
+public class Port<T1 extends Switch, T2 extends Link> extends OFPortDescVer10
         implements Persistable {
 
     /**
@@ -61,30 +71,32 @@ public class Port<T1 extends Switch, T2 extends Link> extends OFPhysicalPort
      * 
      * @param ofPort the OpenFlow physical port
      */
-    protected Port(final OFPhysicalPort ofPort) {
-        super();
-        this.portNumber = ofPort.getPortNumber();
-        this.hardwareAddress = ofPort.getHardwareAddress();
-        this.name = ofPort.getName();
-        this.config = ofPort.getConfig();
-        this.state = ofPort.getState();
-        this.currentFeatures = ofPort.getCurrentFeatures();
-        this.advertisedFeatures = ofPort.getAdvertisedFeatures();
-        this.supportedFeatures = ofPort.getSupportedFeatures();
-        this.peerFeatures = ofPort.getPeerFeatures();
-        if (this.hardwareAddress == null) {
-            this.hardwareAddress = new byte[] {(byte) 0xDE, (byte) 0xAD,
-                    (byte) 0xBE, (byte) 0xEF, (byte) 0xCA, (byte) 0xFE};
-        }
-        this.mac = new MACAddress(this.hardwareAddress);
-        this.isEdge = true;
-        this.parentSwitch = null;
+    protected Port(OFPort portNo, MacAddress hwAddr, String name, Set<OFPortConfig> config, Set<OFPortState> state, Set<OFPortFeatures> curr, Set<OFPortFeatures> advertised, Set<OFPortFeatures> supported, Set<OFPortFeatures> peer,Boolean isEdge,T1 parentSwitch) {
+        super(portNo, hwAddr, name, config, state, curr, advertised, supported, peer);
+       /* Commented out due to redundancy @N
+        if (this.getHwAddr()==null) {
+        	this.createBuilder()
+        	.setHwAddr(MacAddress.of(new byte[] {(byte) 0xDE, (byte) 0xAD,
+                    (byte) 0xBE, (byte) 0xEF, (byte) 0xCA, (byte) 0xFE}))
+                    .build();
+           
+        }*/
+        this.mac = new MACAddress(this.getHwAddr().getBytes());
+        this.isEdge = isEdge;
+        this.parentSwitch = parentSwitch;
         this.portLink = null;
     }
-
-    @Override
+    protected Port(OFPortDesc port)
+    {
+    	super(port.getPortNo(),port.getHwAddr(),port.getName(),port.getConfig(),port.getState(),
+    			port.getCurr(),port.getAdvertised(),port.getSupported(),port.getPeer());
+    
+    }
+    
     public void setHardwareAddress(final byte[] hardwareAddress) {
-        super.setHardwareAddress(hardwareAddress);
+    	this.createBuilder()
+    	.setHwAddr(MacAddress.of(hardwareAddress))
+                .build();
         // no way to update MACAddress instances
         this.mac = new MACAddress(hardwareAddress);
     }
@@ -148,21 +160,21 @@ public class Port<T1 extends Switch, T2 extends Link> extends OFPhysicalPort
      * @return the highest nominal throughput currently exposed by the port
      */
     public Integer getCurrentThroughput() {
-        PortFeatures feature = new PortFeatures(this.currentFeatures);
+        PortFeatures feature = new PortFeatures(this.getCurr());
         return feature.getHighestThroughput();
     }
 
     @Override
     public String toString() {
-        return "PORT:\n- portNumber: " + this.portNumber + "\n- parentSwitch: "
+        return "PORT:\n- portNumber: " + this.getPortNo() + "\n- parentSwitch: "
                 + this.getParentSwitch().getSwitchName()
                 + "\n- hardwareAddress: "
-                + MACAddress.valueOf(this.hardwareAddress).toString()
-                + "\n- config: " + this.config + "\n- state: " + this.state
-                + "\n- currentFeatures: " + this.currentFeatures
-                + "\n- advertisedFeatures: " + this.advertisedFeatures
-                + "\n- supportedFeatures: " + this.supportedFeatures
-                + "\n- peerFeatures: " + this.peerFeatures + "\n- isEdge: "
+                + MACAddress.valueOf(this.getHwAddr().getBytes()).toString()
+                + "\n- config: " + this.getConfig() + "\n- state: " + this.getState()
+                + "\n- currentFeatures: " + this.getCurr()
+                + "\n- advertisedFeatures: " + this.getAdvertised()
+                + "\n- supportedFeatures: " + this.getSupported()
+                + "\n- peerFeatures: " + this.getPeer() + "\n- isEdge: "
                 + this.isEdge;
     }
 
@@ -173,18 +185,19 @@ public class Port<T1 extends Switch, T2 extends Link> extends OFPhysicalPort
      */
     @Override
     public int hashCode() {
-        final int prime = 307;
+    	final int prime = 307;
         int result = 1;
-        result = prime * result + this.advertisedFeatures;
-        result = prime * result + this.config;
-        result = prime * result + Arrays.hashCode(this.hardwareAddress);
+        result = prime * result + OFPortFeaturesSerializerVer10.toWireValue(this.getAdvertised());
+        result = prime * result + OFPortConfigSerializerVer10.toWireValue(this.getConfig());
+        result = prime * result + Arrays.hashCode(this.getHwAddr().getBytes());
         result = prime * result
                 + (this.name == null ? 0 : this.name.hashCode());
-        result = prime * result + this.portNumber;
+        result = prime * result + this.getPortNo().getShortPortNumber();
         result = prime * result + this.parentSwitch.hashCode();
         return result;
     }
-
+    
+  
     @Override
     public boolean equals(Object obj) {
         if (this == obj) {
@@ -226,11 +239,11 @@ public class Port<T1 extends Switch, T2 extends Link> extends OFPhysicalPort
     public Map<String, Object> getDBObject() {
         Map<String, Object> dbObject = new HashMap<String, Object>();
         dbObject.put(TenantHandler.DPID, this.parentSwitch.getSwitchId());
-        dbObject.put(TenantHandler.PORT, this.getPortNumber());
+        dbObject.put(TenantHandler.PORT, this.getPortNo());
         return dbObject;
     }
 
     public DPIDandPort toDPIDandPort() {
-        return new DPIDandPort(this.parentSwitch.getSwitchId(), this.portNumber);
+        return new DPIDandPort(this.parentSwitch.getSwitchId(), this.getPortNo());
     }
 }

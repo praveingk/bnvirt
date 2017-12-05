@@ -6,5 +6,6 @@ package net.onrc.openvirtex.api.Global;
 public enum TAG {
     NOTAG,
     TOS,
-    VLAN
+    VLAN,
+    IP
 }

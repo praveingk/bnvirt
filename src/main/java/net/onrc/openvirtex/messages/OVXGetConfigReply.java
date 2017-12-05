@@ -15,17 +15,11 @@
  ******************************************************************************/
 package net.onrc.openvirtex.messages;
 
-import net.onrc.openvirtex.elements.datapath.PhysicalSwitch;
 
-import org.openflow.protocol.OFGetConfigReply;
+import org.projectfloodlight.openflow.protocol.OFGetConfigReply;
 
-public class OVXGetConfigReply extends OFGetConfigReply implements
+public interface OVXGetConfigReply extends OFGetConfigReply,
         Virtualizable {
 
-    @Override
-    public void virtualize(final PhysicalSwitch sw) {
-        // TODO Auto-generated method stub
-
-    }
 
 }

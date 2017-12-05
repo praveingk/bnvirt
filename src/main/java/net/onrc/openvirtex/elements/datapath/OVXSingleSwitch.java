@@ -20,7 +20,7 @@ import net.onrc.openvirtex.exceptions.SwitchMappingException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.openflow.protocol.OFMessage;
+import org.projectfloodlight.openflow.protocol.OFMessage;
 
 public class OVXSingleSwitch extends OVXSwitch {
 
@@ -46,7 +46,6 @@ public class OVXSingleSwitch extends OVXSwitch {
     // TODO: this is probably not optimal
     public void sendSouth(final OFMessage msg, final OVXPort inPort) {
         PhysicalSwitch psw = getPhySwitch(inPort);
-        System.out.println("Sending packet to sw :"+psw.getName() + " msg = "+ msg.toString());
         log.debug("Sending packet to sw {}: {}", psw.getName(), msg);
         psw.sendMsg(msg, this);
     }

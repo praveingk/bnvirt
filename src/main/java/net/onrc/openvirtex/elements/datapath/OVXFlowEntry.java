@@ -20,12 +20,20 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import net.onrc.openvirtex.core.OVXFactoryInst;
 import net.onrc.openvirtex.messages.OVXFlowMod;
+import net.onrc.openvirtex.messages.OVXFlowModify;
 import net.onrc.openvirtex.protocol.OVXMatch;
+import net.onrc.openvirtex.protocol.OVXMatchV3;
 import net.onrc.openvirtex.util.MACAddress;
 
-import org.openflow.protocol.OFMatch;
-import org.openflow.protocol.action.OFAction;
+import org.projectfloodlight.openflow.protocol.OFMatchV1;
+import org.projectfloodlight.openflow.protocol.match.Match;
+import org.projectfloodlight.openflow.protocol.ver10.OFMatchV1Ver10;
+import org.projectfloodlight.openflow.protocol.action.OFAction;
+import org.projectfloodlight.openflow.types.IPv4Address;
+import org.projectfloodlight.openflow.types.IpProtocol;
+import org.projectfloodlight.openflow.types.TransportPort;
 
 /**
  * Class representing a virtual flow entry - a wrapper for FlowMods that enables
@@ -75,146 +83,154 @@ public class OVXFlowEntry implements Comparable<OVXFlowEntry> {
      *            whether FlowMod from which the match came was strict or not.
      * @return Union enum representing the relationship
      */
-    public int compare(OFMatch omatch, boolean strict) {
-        // to allow pass by reference...in order: equal, superset, subset
+    public int compare(Match omatch, boolean strict) {
+    	 // to allow pass by reference...in order: equal, superset, subset
         int[] intersect = new int[] {0, 0, 0};
 
-        OFMatch tmatch = this.flowmod.getMatch();
-        int twcard = tmatch.getWildcards();
-        int owcard = this.convertToWcards(omatch);
+        Match tmatch = this.flowmod.getMatch();
+        if (OVXFactoryInst.ofversion == 10) {
+            int twcard = ((OFMatchV1) tmatch).getWildcards();
+            int owcard = this.convertToWcards(omatch);
 
-        /* inport */
-        if ((twcard & OFMatch.OFPFW_IN_PORT) == (owcard & OFMatch.OFPFW_IN_PORT)) {
-            if (findDisjoint(twcard, OFMatch.OFPFW_IN_PORT, intersect,
-                    tmatch.getInputPort(), omatch.getInputPort())) {
-                return DISJOINT;
+            /* inport */
+            if ((twcard & OFMatchV1Ver10.OFPFW_IN_PORT) == (owcard & OFMatchV1Ver10.OFPFW_IN_PORT)) {
+                if (findDisjoint(twcard, OFMatchV1Ver10.OFPFW_IN_PORT, intersect,
+                        ((OFMatchV1) tmatch).getInPort().getPortNumber(), ((OFMatchV1) omatch).getInPort().getPortNumber())) {
+                    return DISJOINT;
+                }
+            } else { /* check if super or subset */
+                findRelation(twcard, owcard, OFMatchV1Ver10.OFPFW_IN_PORT, intersect);
             }
-        } else { /* check if super or subset */
-            findRelation(twcard, owcard, OFMatch.OFPFW_IN_PORT, intersect);
-        }
 
-        /* L2 */
-        if ((twcard & OFMatch.OFPFW_DL_DST) == (owcard & OFMatch.OFPFW_DL_DST)) {
-            if (findDisjoint(twcard, OFMatch.OFPFW_DL_DST, intersect,
-                    tmatch.getDataLayerDestination(),
-                    omatch.getDataLayerDestination())) {
-                return DISJOINT;
+            /* L2 */
+            if ((twcard & OFMatchV1Ver10.OFPFW_DL_DST) == (owcard & OFMatchV1Ver10.OFPFW_DL_DST)) {
+                if (findDisjoint(twcard, OFMatchV1Ver10.OFPFW_DL_DST, intersect,
+                        ((OFMatchV1) tmatch).getEthDst().getLong(),
+                        ((OFMatchV1) omatch).getEthDst().getLong())) {
+                    return DISJOINT;
+                }
+            } else { /* check if super or subset */
+                findRelation(twcard, owcard, OFMatchV1Ver10.OFPFW_DL_DST, intersect);
             }
-        } else { /* check if super or subset */
-            findRelation(twcard, owcard, OFMatch.OFPFW_DL_DST, intersect);
-        }
-        if ((twcard & OFMatch.OFPFW_DL_SRC) == (owcard & OFMatch.OFPFW_DL_SRC)) {
-            if (findDisjoint(twcard, OFMatch.OFPFW_DL_SRC, intersect,
-                    tmatch.getDataLayerSource(), omatch.getDataLayerSource())) {
-                return DISJOINT;
+            if ((twcard & OFMatchV1Ver10.OFPFW_DL_SRC) == (owcard & OFMatchV1Ver10.OFPFW_DL_SRC)) {
+                if (findDisjoint(twcard, OFMatchV1Ver10.OFPFW_DL_SRC, intersect,
+                        ((OFMatchV1) tmatch).getEthSrc().getLong(), ((OFMatchV1) omatch).getEthSrc().getLong())) {
+                    return DISJOINT;
+                }
+            } else { /* check if super or subset */
+                findRelation(twcard, owcard, OFMatchV1Ver10.OFPFW_DL_SRC, intersect);
             }
-        } else { /* check if super or subset */
-            findRelation(twcard, owcard, OFMatch.OFPFW_DL_SRC, intersect);
-        }
-        if ((twcard & OFMatch.OFPFW_DL_TYPE) == (owcard & OFMatch.OFPFW_DL_TYPE)) {
-            if (findDisjoint(twcard, OFMatch.OFPFW_DL_TYPE, intersect,
-                    tmatch.getDataLayerType(), omatch.getDataLayerType())) {
-                return DISJOINT;
+            if ((twcard & OFMatchV1Ver10.OFPFW_DL_TYPE) == (owcard & OFMatchV1Ver10.OFPFW_DL_TYPE)) {
+                if (findDisjoint(twcard, OFMatchV1Ver10.OFPFW_DL_TYPE, intersect,
+                        ((OFMatchV1) tmatch).getEthType().getValue(), ((OFMatchV1) omatch).getEthType().getValue())) {
+                    return DISJOINT;
+                }
+            } else { /* check if super or subset */
+                findRelation(twcard, owcard, OFMatchV1Ver10.OFPFW_DL_TYPE, intersect);
             }
-        } else { /* check if super or subset */
-            findRelation(twcard, owcard, OFMatch.OFPFW_DL_TYPE, intersect);
-        }
-        if ((twcard & OFMatch.OFPFW_DL_VLAN) == (owcard & OFMatch.OFPFW_DL_VLAN)) {
-            if (findDisjoint(twcard, OFMatch.OFPFW_DL_VLAN, intersect,
-                    tmatch.getDataLayerVirtualLan(),
-                    omatch.getDataLayerVirtualLan())) {
-                return DISJOINT;
+            if ((twcard & OFMatchV1Ver10.OFPFW_DL_VLAN) == (owcard & OFMatchV1Ver10.OFPFW_DL_VLAN)) {
+                if (findDisjoint(twcard, OFMatchV1Ver10.OFPFW_DL_VLAN, intersect,
+                        ((OFMatchV1) tmatch).getVlanVid().getRawVid(),
+                        ((OFMatchV1) omatch).getVlanVid().getRawVid())) {
+                    return DISJOINT;
+                }
+            } else { /* check if super or subset */
+                findRelation(twcard, owcard, OFMatchV1Ver10.OFPFW_DL_VLAN, intersect);
             }
-        } else { /* check if super or subset */
-            findRelation(twcard, owcard, OFMatch.OFPFW_DL_VLAN, intersect);
-        }
-        if ((twcard & OFMatch.OFPFW_DL_VLAN_PCP) == (owcard & OFMatch.OFPFW_DL_VLAN_PCP)) {
-            if (findDisjoint(twcard, OFMatch.OFPFW_DL_VLAN_PCP, intersect,
-                    tmatch.getDataLayerVirtualLanPriorityCodePoint(),
-                    omatch.getDataLayerVirtualLanPriorityCodePoint())) {
-                return DISJOINT;
+            if ((twcard & OFMatchV1Ver10.OFPFW_DL_VLAN_PCP) == (owcard & OFMatchV1Ver10.OFPFW_DL_VLAN_PCP)) {
+                if (findDisjoint(twcard, OFMatchV1Ver10.OFPFW_DL_VLAN_PCP, intersect,
+                        ((OFMatchV1) tmatch).getVlanPcp().getValue(),
+                        ((OFMatchV1) omatch).getVlanPcp().getValue())) {
+                    return DISJOINT;
+                }
+            } else { /* check if super or subset */
+                findRelation(twcard, owcard, OFMatchV1Ver10.OFPFW_DL_VLAN_PCP, intersect);
             }
-        } else { /* check if super or subset */
-            findRelation(twcard, owcard, OFMatch.OFPFW_DL_VLAN_PCP, intersect);
-        }
 
-        /* L3 */
-        if ((twcard & OFMatch.OFPFW_NW_PROTO) == (owcard & OFMatch.OFPFW_NW_PROTO)) {
-            if (findDisjoint(twcard, OFMatch.OFPFW_NW_PROTO, intersect,
-                    tmatch.getNetworkProtocol(), omatch.getNetworkProtocol())) {
-                return DISJOINT;
+            /* L3 */
+            if ((twcard & OFMatchV1Ver10.OFPFW_NW_PROTO) == (owcard & OFMatchV1Ver10.OFPFW_NW_PROTO)) {
+                if (findDisjoint(twcard, OFMatchV1Ver10.OFPFW_NW_PROTO, intersect,
+                        ((OFMatchV1) tmatch).getIpProto().getIpProtocolNumber(), ((OFMatchV1) omatch).getIpProto().getIpProtocolNumber())) {
+                    return DISJOINT;
+                }
+            } else { /* check if super or subset */
+                findRelation(twcard, owcard, OFMatchV1Ver10.OFPFW_NW_PROTO, intersect);
             }
-        } else { /* check if super or subset */
-            findRelation(twcard, owcard, OFMatch.OFPFW_NW_PROTO, intersect);
-        }
-        if ((twcard & OFMatch.OFPFW_NW_TOS) == (owcard & OFMatch.OFPFW_NW_TOS)) {
-            if (findDisjoint(twcard, OFMatch.OFPFW_NW_TOS, intersect,
-                    tmatch.getNetworkTypeOfService(),
-                    omatch.getNetworkTypeOfService())) {
-                return DISJOINT;
+            if ((twcard & OFMatchV1Ver10.OFPFW_NW_TOS) == (owcard & OFMatchV1Ver10.OFPFW_NW_TOS)) {
+                if (findDisjoint(twcard, OFMatchV1Ver10.OFPFW_NW_TOS, intersect,
+                        ((OFMatchV1) tmatch).getIpDscp().getDscpValue(),
+                        ((OFMatchV1) omatch).getIpDscp().getDscpValue())) {
+                    return DISJOINT;
+                }
+            } else { /* check if super or subset */
+                findRelation(twcard, owcard, OFMatchV1Ver10.OFPFW_NW_TOS, intersect);
             }
-        } else { /* check if super or subset */
-            findRelation(twcard, owcard, OFMatch.OFPFW_NW_TOS, intersect);
-        }
-        if ((twcard & OFMatch.OFPFW_NW_DST_ALL) == (owcard & OFMatch.OFPFW_NW_DST_ALL)) {
-            if (findDisjoint(twcard,
-                    (OFMatch.OFPFW_NW_DST_ALL | OFMatch.OFPFW_NW_DST_MASK),
-                    intersect, tmatch.getNetworkDestination(),
-                    omatch.getNetworkDestination())) {
-                return DISJOINT;
+            if ((twcard & OFMatchV1Ver10.OFPFW_NW_DST_ALL) == (owcard & OFMatchV1Ver10.OFPFW_NW_DST_ALL)) {
+                if (findDisjoint(twcard,
+                        (OFMatchV1Ver10.OFPFW_NW_DST_ALL | OFMatchV1Ver10.OFPFW_NW_DST_MASK),
+                        intersect, ((OFMatchV1) tmatch).getIpv4Dst().getInt(),
+                        ((OFMatchV1) omatch).getIpv4Dst().getInt())) {
+                    return DISJOINT;
+                }
+            } else { /* check if super or subset */
+                findRelation(twcard, owcard, OFMatchV1Ver10.OFPFW_NW_DST_ALL
+                        | OFMatchV1Ver10.OFPFW_NW_DST_MASK, intersect);
             }
-        } else { /* check if super or subset */
-            findRelation(twcard, owcard, OFMatch.OFPFW_NW_DST_ALL
-                    | OFMatch.OFPFW_NW_DST_MASK, intersect);
-        }
-        if ((twcard & OFMatch.OFPFW_NW_SRC_ALL) == (owcard & OFMatch.OFPFW_NW_SRC_ALL)) {
-            if (findDisjoint(twcard,
-                    (OFMatch.OFPFW_NW_SRC_ALL | OFMatch.OFPFW_NW_SRC_MASK),
-                    intersect, tmatch.getNetworkSource(),
-                    omatch.getNetworkSource())) {
-                return DISJOINT;
+            if ((twcard & OFMatchV1Ver10.OFPFW_NW_SRC_ALL) == (owcard & OFMatchV1Ver10.OFPFW_NW_SRC_ALL)) {
+                if (findDisjoint(twcard,
+                        (OFMatchV1Ver10.OFPFW_NW_SRC_ALL | OFMatchV1Ver10.OFPFW_NW_SRC_MASK),
+                        intersect, ((OFMatchV1) tmatch).getIpv4Src().getInt(),
+                        ((OFMatchV1) omatch).getIpv4Src().getInt())) {
+                    return DISJOINT;
+                }
+            } else { /* check if super or subset */
+                findRelation(twcard, owcard, OFMatchV1Ver10.OFPFW_NW_SRC_ALL
+                        | OFMatchV1Ver10.OFPFW_NW_SRC_MASK, intersect);
             }
-        } else { /* check if super or subset */
-            findRelation(twcard, owcard, OFMatch.OFPFW_NW_SRC_ALL
-                    | OFMatch.OFPFW_NW_SRC_MASK, intersect);
-        }
 
-        /* L4 */
-        if ((twcard & OFMatch.OFPFW_TP_SRC) == (owcard & OFMatch.OFPFW_TP_SRC)) {
-            if (findDisjoint(twcard, OFMatch.OFPFW_TP_SRC, intersect,
-                    tmatch.getTransportSource(), omatch.getTransportSource())) {
-                return DISJOINT;
+            /* L4 */
+            if ((twcard & OFMatchV1Ver10.OFPFW_TP_SRC) == (owcard & OFMatchV1Ver10.OFPFW_TP_SRC)) {
+                if (findDisjoint(twcard, OFMatchV1Ver10.OFPFW_TP_SRC, intersect,
+                        ((OFMatchV1) tmatch).getTcpSrc().getPort(), ((OFMatchV1) omatch).getTcpSrc().getPort())) {
+                    return DISJOINT;
+                }
+            } else { /* check if super or subset */
+                findRelation(twcard, owcard, OFMatchV1Ver10.OFPFW_TP_SRC, intersect);
             }
-        } else { /* check if super or subset */
-            findRelation(twcard, owcard, OFMatch.OFPFW_TP_SRC, intersect);
-        }
-        if ((twcard & OFMatch.OFPFW_TP_DST) == (owcard & OFMatch.OFPFW_TP_DST)) {
-            if (findDisjoint(twcard, OFMatch.OFPFW_TP_DST, intersect,
-                    tmatch.getTransportDestination(),
-                    omatch.getTransportDestination())) {
-                return DISJOINT;
+            if ((twcard & OFMatchV1Ver10.OFPFW_TP_DST) == (owcard & OFMatchV1Ver10.OFPFW_TP_DST)) {
+                if (findDisjoint(twcard, OFMatchV1Ver10.OFPFW_TP_DST, intersect,
+                        ((OFMatchV1) tmatch).getTcpDst().getPort(),
+                        ((OFMatchV1) omatch).getTcpDst().getPort())) {
+                    return DISJOINT;
+                }
+            } else { /* check if super or subset */
+                findRelation(twcard, owcard, OFMatchV1Ver10.OFPFW_TP_DST, intersect);
             }
-        } else { /* check if super or subset */
-            findRelation(twcard, owcard, OFMatch.OFPFW_TP_DST, intersect);
-        }
 
-        int equal = intersect[EQUAL];
-        int superset = intersect[SUPERSET];
-        int subset = intersect[SUBSET];
+            int equal = intersect[EQUAL];
+            int superset = intersect[SUPERSET];
+            int subset = intersect[SUBSET];
 
-        if (!strict) {
-            equal |= subset;
+            if (!strict) {
+                equal |= subset;
+            }
+            if (equal == OFMatchV1Ver10.OFPFW_ALL) {
+                return EQUAL;
+            }
+            if (superset == OFMatchV1Ver10.OFPFW_ALL) {
+                return SUPERSET;
+            }
+            if (subset == OFMatchV1Ver10.OFPFW_ALL) {
+                return SUBSET;
+            }
+            return INTERSECT;
+        } else {
+            //OVXMatchV3 otherMatch = (OVXMatchV3)omatch;
+            //OVXMatchV3 thisMatch = (OVXMatchV3)this.getMatch();
+            // TODO Pravein: See what can be done here?
+
+            return DISJOINT;
         }
-        if (equal == OFMatch.OFPFW_ALL) {
-            return EQUAL;
-        }
-        if (superset == OFMatch.OFPFW_ALL) {
-            return SUPERSET;
-        }
-        if (subset == OFMatch.OFPFW_ALL) {
-            return SUBSET;
-        }
-        return INTERSECT;
     }
 
     /**
@@ -222,34 +238,37 @@ public class OVXFlowEntry implements Comparable<OVXFlowEntry> {
      * NW_SRC/DST 0.0.0.0, and TCP/UDP port 0.
      *
      * @param omatch
-     *            The OFMatch of the FlowMod we are comparing entries against
+     *            The Match of the FlowMod we are comparing entries against
      * @param owcard
      *            The wildcard field of the FlowMod.
      * @return the modified wildcard value (a copy).
      */
-    private int convertToWcards(OFMatch omatch) {
-        int owcard = omatch.getWildcards();
-        if (omatch.getNetworkDestination() == 0) {
-            owcard |= OFMatch.OFPFW_NW_DST_ALL | OFMatch.OFPFW_NW_DST_MASK;
-        }
-        if (omatch.getNetworkSource() == 0) {
-            owcard |= OFMatch.OFPFW_NW_SRC_ALL | OFMatch.OFPFW_NW_SRC_MASK;
-        }
-        if (omatch.getNetworkProtocol() == 0) {
-            owcard |= OFMatch.OFPFW_NW_PROTO;
-        }
-        if (omatch.getTransportDestination() == 0) {
-            owcard |= OFMatch.OFPFW_TP_DST;
-        }
-        if (omatch.getTransportSource() == 0) {
-            owcard |= OFMatch.OFPFW_TP_SRC;
-        }
-        return owcard;
+    private int convertToWcards(Match omatch) {
+
+    	int owcard = ((OFMatchV1)omatch).getWildcards();
+
+         if (((OFMatchV1)omatch).getIpv4Dst() == IPv4Address.NONE) {
+             owcard |= OFMatchV1Ver10.OFPFW_NW_DST_ALL | OFMatchV1Ver10.OFPFW_NW_DST_MASK;
+         }
+         if (((OFMatchV1)omatch).getIpv4Src() == IPv4Address.NONE) {
+             owcard |= OFMatchV1Ver10.OFPFW_NW_SRC_ALL | OFMatchV1Ver10.OFPFW_NW_SRC_MASK;
+         }
+         if (((OFMatchV1)omatch).getIpProto() == IpProtocol.NONE) {
+             owcard |= OFMatchV1Ver10.OFPFW_NW_PROTO;
+         }
+         if (((OFMatchV1)omatch).getTcpDst() == TransportPort.NONE) {
+             owcard |= OFMatchV1Ver10.OFPFW_TP_DST;
+         }
+         if (((OFMatchV1)omatch).getTcpSrc() == TransportPort.NONE) {
+             owcard |= OFMatchV1Ver10.OFPFW_TP_SRC;
+         }
+         return owcard;
+
     }
 
     /**
      * determine if a field is not equal-valued, for non-array fields first
-     * checks if the OFMatch wildcard is fully wildcarded for the field. If not,
+     * checks if the Match wildcard is fully wildcarded for the field. If not,
      * it checks the equality of the field value.
      *
      * @param wcard
@@ -309,7 +328,7 @@ public class OVXFlowEntry implements Comparable<OVXFlowEntry> {
      * @param wcard2
      *            other wildcard field
      * @param field
-     *            OFMatch wildcard value
+     *            Match wildcard value
      * @param intersect
      *            intersection sets
      */
@@ -321,18 +340,18 @@ public class OVXFlowEntry implements Comparable<OVXFlowEntry> {
         }
     }
 
-    /** @return original OFMatch */
-    public OFMatch getMatch() {
+    /** @return original Match */
+    public Match getMatch() {
         return this.flowmod.getMatch();
     }
 
     /** @return the virtual output port */
     public short getOutport() {
-        return this.flowmod.getOutPort();
+        return this.flowmod.getOutPort().getShortPortNumber();
     }
 
     public short getPriority() {
-        return this.flowmod.getPriority();
+        return (short)this.flowmod.getPriority();
     }
 
     public OVXFlowMod getFlowMod() {
@@ -367,7 +386,7 @@ public class OVXFlowEntry implements Comparable<OVXFlowEntry> {
      * @return The original (virtual) cookie
      */
     public long getCookie() {
-        return this.flowmod.getCookie();
+        return this.flowmod.getCookie().getValue();
     }
 
     public List<OFAction> getActionsList() {
@@ -424,7 +443,7 @@ public class OVXFlowEntry implements Comparable<OVXFlowEntry> {
      * @param other
      * @return
      */
-    public boolean equals(final OVXFlowMod other) {
+    public boolean equals(final OVXFlowModify other) {
         return this.flowmod.equals(other);
     }
 

@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.Set;
 
 import net.onrc.openvirtex.api.service.handlers.TenantHandler;
-import net.onrc.openvirtex.core.OpenVirteX;
 import net.onrc.openvirtex.elements.OVXMap;
 import net.onrc.openvirtex.elements.address.IPAddress;
 import net.onrc.openvirtex.elements.address.OVXIPAddress;
@@ -38,6 +37,7 @@ import net.onrc.openvirtex.exceptions.DuplicateIndexException;
 import net.onrc.openvirtex.exceptions.IndexOutOfBoundException;
 import net.onrc.openvirtex.exceptions.PortMappingException;
 import net.onrc.openvirtex.exceptions.RoutingAlgorithmException;
+import net.onrc.openvirtex.exceptions.SwitchMappingException;
 import net.onrc.openvirtex.routing.RoutingAlgorithms.RoutingType;
 import net.onrc.openvirtex.routing.SwitchRoute;
 import net.onrc.openvirtex.util.MACAddress;
@@ -166,8 +166,9 @@ public class OVXNetworkManager {
      * network if all links and switches are online.
      *
      * @param dpid the switch DPID.
+     * @throws SwitchMappingException 
      */
-    public synchronized void setSwitch(final Long dpid) {
+    public synchronized void setSwitch(final Long dpid) throws SwitchMappingException {
         this.offlineSwitches.remove(dpid);
         this.onlineSwitches.add(dpid);
         if (this.offlineSwitches.isEmpty() && this.offlineLinks.isEmpty()
@@ -192,8 +193,9 @@ public class OVXNetworkManager {
      * switches are online.
      *
      * @param dpp physical link given as pair of DPID and port
+     * @throws SwitchMappingException 
      */
-    public synchronized void setLink(final DPIDandPortPair dpp) {
+    public synchronized void setLink(final DPIDandPortPair dpp) throws SwitchMappingException {
         // Link might have been set already, so check first if it's still
         // offline
         if (this.offlineLinks.contains(dpp)) {
@@ -223,10 +225,11 @@ public class OVXNetworkManager {
      * direction to online. Create and start virtual network if all links and
      * switches are online.
      *
-     * @param key
+     * @param port
      *            Unique link
+     * @throws SwitchMappingException 
      */
-    public synchronized void setPort(final DPIDandPort port) {
+    public synchronized void setPort(final DPIDandPort port) throws SwitchMappingException {
         // Port might have been set already, so check first if it's still
         // offline
         if (this.offlinePorts.contains(port)) {
@@ -242,7 +245,7 @@ public class OVXNetworkManager {
     /**
      * Changes link from online to offline state.
      *
-     * @param key
+     * @param port
      *            Unique link
      */
     public synchronized void unsetPort(final DPIDandPort port) {
@@ -292,10 +295,11 @@ public class OVXNetworkManager {
      * Creates the elements based on persistent storage, boots
      * network afterwards.
      * TODO: proper error handling (roll-back?).
+     * @throws SwitchMappingException 
      */
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
-    private void createElements() {
+    private void createElements() throws SwitchMappingException {
 
 	if (this.virtualNetwork == null) return;
         OVXNetworkManager.log.info("Virtual network {} ready for boot",
@@ -340,7 +344,6 @@ public class OVXNetworkManager {
                             .getSwitch(physicalDpid);
                     final OVXSwitch virtualSwitch = virtualNetwork.getSwitch(virtualDpid);
                     map.addSwitchPort(physicalSwitch, (int) portNumber, this.tenantId, virtualSwitch);
-
                     virtualNetwork.createPort(physicalDpid, portNumber,
                             vportNumber);
                 } catch (IndexOutOfBoundException e) {

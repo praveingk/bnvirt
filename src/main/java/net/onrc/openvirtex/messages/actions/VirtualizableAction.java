@@ -20,15 +20,16 @@ import java.util.List;
 import net.onrc.openvirtex.elements.datapath.OVXSwitch;
 import net.onrc.openvirtex.exceptions.ActionVirtualizationDenied;
 import net.onrc.openvirtex.exceptions.DroppedMessageException;
-import net.onrc.openvirtex.messages.OVXPacketOut;
 import net.onrc.openvirtex.protocol.OVXMatch;
 
-import org.openflow.protocol.action.OFAction;
+import org.projectfloodlight.openflow.protocol.OFMessage;
+import org.projectfloodlight.openflow.protocol.action.OFAction;
+import org.projectfloodlight.openflow.protocol.action.OFActionSetNwSrc;
 
 public interface VirtualizableAction {
 
     public void virtualize(OVXSwitch sw, List<OFAction> approvedActions,
-                           OVXMatch match) throws ActionVirtualizationDenied,
+            OVXMatch match) throws ActionVirtualizationDenied,
             DroppedMessageException;
 
 }

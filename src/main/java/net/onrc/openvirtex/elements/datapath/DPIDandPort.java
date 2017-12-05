@@ -15,16 +15,23 @@
  ******************************************************************************/
 package net.onrc.openvirtex.elements.datapath;
 
+import org.projectfloodlight.openflow.types.OFPort;
+
 public class DPIDandPort {
     long dpid;
     short port;
 
-    public DPIDandPort(final long dpid, final short port) {
+    public DPIDandPort(final long dpid, final OFPort ofPort) {
         super();
         this.dpid = dpid;
-        this.port = port;
+        this.port = ofPort.getShortPortNumber();
     }
 
+    public DPIDandPort(final long dpid, final short ofPort) {
+        super();
+        this.dpid = dpid;
+        this.port = ofPort;
+    }
     /**
      * @return the dpid
      */

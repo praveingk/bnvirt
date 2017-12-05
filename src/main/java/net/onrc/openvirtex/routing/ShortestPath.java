@@ -38,7 +38,7 @@ import net.onrc.openvirtex.exceptions.SwitchMappingException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.openflow.util.U8;
+import org.projectfloodlight.openflow.types.U8;
 
 /**
  * This class implements the Dijkstra Algorithm to compute the shortest path
@@ -394,17 +394,17 @@ public class ShortestPath implements Routable {
                                     + "between ports ({},{}) and ({},{}) in virtual network {}."
                                     + "Check that at least on physical link exists between the switches"
                                     + "that belongs to the big-switch",
-                            vSwitch.getSwitchName(), srcPort.getPortNumber(),
-                            dstPort.getPortNumber(), dstPort.getPortNumber(),
-                            srcPort.getPortNumber(), vSwitch.getTenantId());
+                            vSwitch.getSwitchName(), srcPort.getPortNo(),
+                            dstPort.getPortNo(), dstPort.getPortNo(),
+                            srcPort.getPortNo(), vSwitch.getTenantId());
                     return null;
                 } else {
                     log.warn(
                             "Unable to compute the backup (nr. {}) path for for big-switch {} "
                                     + "between ports ({},{}) and ({},{}) in virtual network {}.",
                             i, vSwitch.getSwitchName(),
-                            srcPort.getPortNumber(), dstPort.getPortNumber(),
-                            dstPort.getPortNumber(), srcPort.getPortNumber(),
+                            srcPort.getPortNo(), dstPort.getPortNo(),
+                            dstPort.getPortNo(), srcPort.getPortNo(),
                             vSwitch.getTenantId());
                     break;
                 }
@@ -422,8 +422,8 @@ public class ShortestPath implements Routable {
                     log.error(
                             "Unable to create the virtual switch route for for big-switch {} "
                                     + "between ports ({},{})  in virtual network {}, too many routes in this virtual switch",
-                            vSwitch.getSwitchName(), srcPort.getPortNumber(),
-                            dstPort.getPortNumber(), vSwitch.getTenantId());
+                            vSwitch.getSwitchName(), srcPort.getPortNo(),
+                            dstPort.getPortNo(), vSwitch.getTenantId());
                 }
             }
         }
@@ -506,9 +506,9 @@ public class ShortestPath implements Routable {
                                         + "Check that at least on physical path exists between the link end-points",
                                 ovxLink.getLinkId(), ovxLink.getSrcSwitch()
                                         .getSwitchName(), ovxLink.getSrcPort()
-                                        .getPortNumber(), ovxLink
+                                        .getPortNo(), ovxLink
                                         .getDstSwitch().getSwitchName(),
-                                ovxLink.getDstPort().getPortNumber(), ovxLink
+                                ovxLink.getDstPort().getPortNo(), ovxLink
                                         .getTenantId());
                     } else {
                         log.warn(
@@ -516,9 +516,9 @@ public class ShortestPath implements Routable {
                                         + "for link {} between ports ({}/{}-{}/{}) in virtual network {}.",
                                 i, ovxLink.getLinkId(), ovxLink.getSrcSwitch()
                                         .getSwitchName(), ovxLink.getSrcPort()
-                                        .getPortNumber(), ovxLink
+                                        .getPortNo(), ovxLink
                                         .getDstSwitch().getSwitchName(),
-                                ovxLink.getDstPort().getPortNumber(), ovxLink
+                                ovxLink.getDstPort().getPortNo(), ovxLink
                                         .getTenantId());
                     }
                     break;

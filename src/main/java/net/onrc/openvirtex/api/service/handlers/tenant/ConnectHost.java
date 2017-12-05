@@ -34,6 +34,7 @@ import net.onrc.openvirtex.util.MACAddress;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.projectfloodlight.openflow.types.OFPort;
 
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Error;
 import com.thetransactioncompany.jsonrpc2.JSONRPC2ParamsType;
@@ -78,7 +79,7 @@ public class ConnectHost extends ApiHandler<Map<String, Object>> {
                 this.log.info(
                         "Connected host with id {} and mac {} to virtual port {} on virtual switch {} in virtual network {}",
                         host.getHostId(), host.getMac().toString(), host
-                                .getPort().getPortNumber(), host.getPort()
+                                .getPort().getPortNo(), host.getPort()
                                 .getParentSwitch().getSwitchName(),
                         virtualNetwork.getTenantId());
                 Map<String, Object> reply = new HashMap<String, Object>(

@@ -20,21 +20,34 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.collect.ImmutableSet;
+import org.projectfloodlight.openflow.protocol.OFFlowAdd;
+import org.projectfloodlight.openflow.protocol.OFFlowModFlags;
+import org.projectfloodlight.openflow.protocol.OFFlowStatsEntry;
+
 import net.onrc.openvirtex.api.service.handlers.ApiHandler;
 import net.onrc.openvirtex.api.service.handlers.HandlerUtils;
 import net.onrc.openvirtex.api.service.handlers.MonitoringHandler;
+import net.onrc.openvirtex.core.OVXFactoryInst;
 import net.onrc.openvirtex.elements.Mappable;
 import net.onrc.openvirtex.elements.OVXMap;
 import net.onrc.openvirtex.elements.datapath.PhysicalSwitch;
 import net.onrc.openvirtex.elements.network.PhysicalNetwork;
 import net.onrc.openvirtex.exceptions.InvalidDPIDException;
 import net.onrc.openvirtex.exceptions.MissingRequiredField;
+import net.onrc.openvirtex.messages.OVXFlowAdd;
 import net.onrc.openvirtex.messages.OVXFlowMod;
-import net.onrc.openvirtex.messages.statistics.OVXFlowStatisticsReply;
+import net.onrc.openvirtex.messages.OVXFlowModify;
+import net.onrc.openvirtex.messages.statistics.OVXFlowStatsReply;
+import net.onrc.openvirtex.messages.statistics.ver10.OVXFlowStatsReplyVer10;
 
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Error;
 import com.thetransactioncompany.jsonrpc2.JSONRPC2ParamsType;
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Response;
+import org.projectfloodlight.openflow.types.OFBufferId;
+import org.projectfloodlight.openflow.types.OFGroup;
+import org.projectfloodlight.openflow.types.OFPort;
+import org.projectfloodlight.openflow.types.U64;
 
 public class GetPhysicalFlowtable extends ApiHandler<Map<String, Object>> {
 
@@ -46,7 +59,7 @@ public class GetPhysicalFlowtable extends ApiHandler<Map<String, Object>> {
             final Number dpid = HandlerUtils.<Number>fetchField(
                     MonitoringHandler.DPID, params, false, -1);
             final OVXMap map = OVXMap.getInstance();
-            LinkedList<OVXFlowStatisticsReply> flows = new LinkedList<OVXFlowStatisticsReply>();
+            LinkedList<OVXFlowStatsReply> flows = new LinkedList<OVXFlowStatsReply>();
 
             if (dpid.longValue() == -1) {
                 HashMap<String, List<Map<String, Object>>> res = new HashMap<String, List<Map<String, Object>>>();
@@ -83,20 +96,27 @@ public class GetPhysicalFlowtable extends ApiHandler<Map<String, Object>> {
     }
 
     private List<Map<String, Object>> flowModsToMap(
-            LinkedList<OVXFlowStatisticsReply> flows) {
+            LinkedList<OVXFlowStatsReply> flows) {
         final List<Map<String, Object>> res = new LinkedList<Map<String, Object>>();
-        for (OVXFlowStatisticsReply frep : flows) {
-            OVXFlowMod fm = new OVXFlowMod();
-            fm.setActions(frep.getActions());
-            fm.setMatch(frep.getMatch());
-            res.add(fm.toMap());
+        for (OVXFlowStatsReply frep : flows) {
+        	for(OFFlowStatsEntry f:  frep.getEntries())
+        	{
+                OVXFlowAdd fm = null;
+                if (OVXFactoryInst.ofversion == 10) {
+                    fm = OVXFactoryInst.myOVXFactory.buildOVXFlowAdd(0, f.getMatch(), null, 0, 0, 0, null, null, null, f.getActions());
+                } else {
+                    fm = OVXFactoryInst.myOVXFactory.buildOVXFlowAdd(0, f.getCookie(), U64.ZERO, f.getTableId(), f.getIdleTimeout(), f.getHardTimeout(), f.getPriority(), OFBufferId.NO_BUFFER, OFPort.ALL, OFGroup.ZERO, f.getFlags(), f.getMatch(), f.getInstructions());
+                }
+        	    res.add(fm.toMap());//TODO:replaced FlowMod with Flow Add. Check whether it affects the functionality or not
+        	}
+            
         }
         return res;
     }
 
-    private LinkedList<OVXFlowStatisticsReply> aggregateFlowsBySwitch(
+    private LinkedList<OVXFlowStatsReply> aggregateFlowsBySwitch(
             long dpid, Mappable map) {
-        LinkedList<OVXFlowStatisticsReply> flows = new LinkedList<OVXFlowStatisticsReply>();
+        LinkedList<OVXFlowStatsReply> flows = new LinkedList<OVXFlowStatsReply>();
         final PhysicalSwitch sw = PhysicalNetwork.getInstance().getSwitch(dpid);
         for (Integer tid : map.listVirtualNetworks().keySet()) {
             if (sw.getFlowStats(tid) != null) {

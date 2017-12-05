@@ -21,6 +21,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.commons.lang.ArrayUtils;
+import org.projectfloodlight.openflow.types.OFPort;
 
 import net.onrc.openvirtex.elements.datapath.DPIDandPort;
 import net.onrc.openvirtex.elements.datapath.Switch;
@@ -250,7 +251,7 @@ public class OVXLLDP extends LLDP {
      */
     public void setPort(Port port) {
         this.port = port;
-        short portNumber = this.port.getPortNumber();
+        short portNumber = this.port.getPortNo().getShortPortNumber();
         this.setPortTLV(portNumber);
     }
 
@@ -360,6 +361,6 @@ public class OVXLLDP extends LLDP {
         final short port = bb.getShort(PORT_OFFSET + offset);
         final long dpid = bb.getLong(DPID_OFFSET + offset);
 
-        return new DPIDandPort(dpid, port);
+        return new DPIDandPort(dpid, OFPort.ofShort(port));
     }
 }

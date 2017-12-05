@@ -15,17 +15,8 @@
  ******************************************************************************/
 package net.onrc.openvirtex.messages;
 
-import net.onrc.openvirtex.elements.datapath.OVXSwitch;
+import org.projectfloodlight.openflow.protocol.OFBarrierRequest;
 
-import org.openflow.protocol.OFBarrierRequest;
-
-public class OVXBarrierRequest extends OFBarrierRequest implements
-        Devirtualizable {
-
-    @Override
-    public void devirtualize(final OVXSwitch sw) {
-        // TODO Auto-generated method stub
-
-    }
+public interface OVXBarrierRequest extends OFBarrierRequest,Devirtualizable {
 
 }

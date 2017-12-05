@@ -15,13 +15,16 @@ import net.onrc.openvirtex.messages.actions.OVXActionNetworkLayerSource;
 import net.onrc.openvirtex.messages.actions.OVXActionNetworkTypeOfService;
 import net.onrc.openvirtex.messages.actions.OVXActionStripVirtualLan;
 import net.onrc.openvirtex.messages.actions.OVXActionVirtualLanIdentifier;
+import net.onrc.openvirtex.messages.actions.ver10.OVXActionNetworkTypeOfServiceVer10;
 import net.onrc.openvirtex.packet.Ethernet;
+import net.onrc.openvirtex.protocol.OVXMatch;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.openflow.protocol.OFMatch;
-import org.openflow.protocol.Wildcards;
-import org.openflow.protocol.action.OFAction;
-import org.openflow.protocol.action.OFActionType;
+import org.projectfloodlight.openflow.protocol.OFMatchV1;
+import org.projectfloodlight.openflow.protocol.OFMatchV3;
+import org.projectfloodlight.openflow.protocol.action.OFAction;
+import org.projectfloodlight.openflow.types.IpDscp;
+
 
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -54,38 +57,65 @@ public final class TenantMapperTos {
     }
 
 
-    public static void rewriteMatch(final Integer tenantId, final OFMatch match) {
+    public static void rewriteMatch(final Integer tenantId, OFMatchV1 match) {
         byte tos = getPhysicalTag(tenantId);
         System.out.println("Rewriting match: Setting ToS: "+ tos);
         int wcard = match.getWildcards()
-                & (~OFMatch.OFPFW_NW_TOS);
-        match.setWildcards(wcard);
-        match.setNetworkTypeOfService(tos);
+                & (~OVXMatch.OFPFW_NW_TOS);
+        match = match.createBuilder().setIpDscp(IpDscp.of(tos)).setWildcards(wcard).build();
     }
 
 
-    public static void prependRewriteActions(final Integer tenantId, final OFMatch match, List<OFAction> approvedActions) {
+    public static void prependRewriteActions(final Integer tenantId, final OFMatchV1 match, List<OFAction> approvedActions) {
         /* Below shifting is done because the switch doesnt not set the ECN bits (last 2 bits) for some reason */
         Integer mid = tenantId << 2;
         byte tos  = mid.byteValue();
-        final OVXActionNetworkTypeOfService ovtos = new OVXActionNetworkTypeOfService();
+        final OVXActionNetworkTypeOfService ovtos = new OVXActionNetworkTypeOfServiceVer10(tos);
 
         System.out.println("Rewriting Action: Setting ToS: " + tos);
-
-        ovtos.setNetworkTypeOfService(tos);
 
         approvedActions.add(0, ovtos);
         System.out.println("Actions : "+ approvedActions.toString());
     }
 
 
-    public static void prependUnRewriteActions(final OFMatch match, List<OFAction> approvedActions) {
+    public static void prependUnRewriteActions(final OFMatchV1 match, List<OFAction> approvedActions) {
         byte untos = 0;
-        final OVXActionNetworkTypeOfService ovtos = new OVXActionNetworkTypeOfService();
+        final OVXActionNetworkTypeOfService ovtos = new OVXActionNetworkTypeOfServiceVer10(untos);
         System.out.println("Pravein: Unsetting Action.. Setting ToS: " + 0);
 
-        ovtos.setNetworkTypeOfService(untos);
         approvedActions.add(0, ovtos);
+    }
+
+
+    public static void rewriteMatch(final Integer tenantId, OFMatchV3 match) {
+        byte tos = getPhysicalTag(tenantId);
+        System.out.println("Rewriting match: Setting ToS: "+ tos);
+//        int wcard = match.getWildcards()
+//                & (~OVXMatch.OFPFW_NW_TOS);
+//        match = match.createBuilder().setIpDscp(IpDscp.of(tos)).setWildcards(wcard).build();
+    }
+
+
+    public static void prependRewriteActions(final Integer tenantId, final OFMatchV3 match, List<OFAction> approvedActions) {
+        /* Below shifting is done because the switch doesnt not set the ECN bits (last 2 bits) for some reason */
+        Integer mid = tenantId << 2;
+        byte tos  = mid.byteValue();
+//        final OVXActionNetworkTypeOfService ovtos = new OVXActionNetworkTypeOfServiceVer10(tos);
+//
+//        System.out.println("Rewriting Action: Setting ToS: " + tos);
+//
+//        approvedActions.add(0, ovtos);
+//        System.out.println("Actions : "+ approvedActions.toString());
+    }
+
+
+    public static void prependUnRewriteActions(final OFMatchV3 match, List<OFAction> approvedActions) {
+        byte untos = 0;
+//        final OVXActionNetworkTypeOfService ovtos = new OVXActionNetworkTypeOfServiceVer10(untos);
+//        System.out.println("Pravein: Unsetting Action.. Setting ToS: " + 0);
+//
+//        approvedActions.add(0, ovtos);
     }
 
 }

@@ -28,6 +28,7 @@ import net.onrc.openvirtex.api.service.handlers.monitoring.GetVirtualLinkMapping
 import net.onrc.openvirtex.api.service.handlers.monitoring.GetVirtualSwitchMapping;
 import net.onrc.openvirtex.api.service.handlers.monitoring.GetVirtualTopology;
 import net.onrc.openvirtex.api.service.handlers.monitoring.ListVirtualNetworks;
+import net.onrc.openvirtex.exceptions.SwitchMappingException;
 
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Error;
 import com.thetransactioncompany.jsonrpc2.JSONRPC2ParamsType;
@@ -86,7 +87,7 @@ public class MonitoringHandler extends AbstractHandler implements
     @Override
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public JSONRPC2Response process(final JSONRPC2Request req,
-            final MessageContext ctxt) {
+            final MessageContext ctxt)  {
 
         final ApiHandler m = this.handlers.get(req.getMethod());
         if (m != null) {
@@ -101,11 +102,26 @@ public class MonitoringHandler extends AbstractHandler implements
 
             switch (m.getType()) {
             case NO_PARAMS:
-                return m.process(null);
+                try {
+					return m.process(null);
+				} catch (SwitchMappingException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
             case ARRAY:
-                return m.process(req.getPositionalParams());
+                try {
+					return m.process(req.getPositionalParams());
+				} catch (SwitchMappingException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
             case OBJECT:
-                return m.process(req.getNamedParams());
+                try {
+					return m.process(req.getNamedParams());
+				} catch (SwitchMappingException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
             default:
                 break;
             }

@@ -65,10 +65,8 @@ public class CreateOVXNetwork extends ApiHandler<Map<String, Object>> {
             final IPAddress addr = new OVXIPAddress(netAddress, -1);
             final OVXNetwork virtualNetwork = new OVXNetwork(ctrlUrls, addr,
                     netMask.shortValue());
-
             if (GlobalConfig.bnvTagType == TAG.TOS) {
                 if (virtualNetwork.getTenantId() > 63) {
-                    /* 63 because only 6 bits are supported in Match (DSCP) */
                     resp = new JSONRPC2Response(new JSONRPC2Error(
                             JSONRPC2Error.INVALID_PARAMS.getCode(), this.cmdName()
                             + ": Unable to create virtual network, Exceeded Max tenants!!"), 0);

@@ -154,7 +154,7 @@ public interface Mappable {
      *         in the OVXNetwork
      */
     public OVXSwitch getVirtualSwitch(PhysicalSwitch physicalSwitch, Integer port,
-                                      Integer tenantId) throws SwitchMappingException;
+            Integer tenantId) throws SwitchMappingException;
 
     /**
      * Gets the list of OVXLinks that are part of virtual network identified by

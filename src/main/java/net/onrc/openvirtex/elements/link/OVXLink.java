@@ -15,20 +15,12 @@
  ******************************************************************************/
 package net.onrc.openvirtex.elements.link;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 import net.onrc.openvirtex.api.Global.GlobalConfig;
 import net.onrc.openvirtex.api.Global.TAG;
 import net.onrc.openvirtex.api.service.handlers.TenantHandler;
+import net.onrc.openvirtex.core.OVXFactoryInst;
 import net.onrc.openvirtex.db.DBManager;
 import net.onrc.openvirtex.elements.Mappable;
 import net.onrc.openvirtex.elements.Mapper.TenantMapperTos;
@@ -43,20 +35,33 @@ import net.onrc.openvirtex.exceptions.IndexOutOfBoundException;
 import net.onrc.openvirtex.exceptions.LinkMappingException;
 import net.onrc.openvirtex.exceptions.NetworkMappingException;
 import net.onrc.openvirtex.exceptions.PortMappingException;
+import net.onrc.openvirtex.messages.OVXFlowAdd;
+import net.onrc.openvirtex.messages.OVXFlowDelete;
+import net.onrc.openvirtex.messages.OVXFlowDeleteStrict;
 import net.onrc.openvirtex.messages.OVXFlowMod;
+import net.onrc.openvirtex.messages.OVXFlowModify;
+import net.onrc.openvirtex.messages.OVXFlowModifyStrict;
 import net.onrc.openvirtex.messages.OVXPacketOut;
-import net.onrc.openvirtex.messages.actions.OVXActionOutput;
+import net.onrc.openvirtex.messages.actions.ver10.OVXActionOutputVer10;
 import net.onrc.openvirtex.packet.Ethernet;
 import net.onrc.openvirtex.routing.RoutingAlgorithms;
 import net.onrc.openvirtex.routing.RoutingAlgorithms.RoutingType;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.openflow.protocol.OFFlowMod;
-import org.openflow.protocol.action.OFAction;
-import org.openflow.protocol.action.OFActionOutput;
-import org.openflow.protocol.action.OFActionType;
-import org.openflow.util.U8;
+import org.projectfloodlight.openflow.protocol.*;
+import org.projectfloodlight.openflow.protocol.action.OFAction;
+import org.projectfloodlight.openflow.protocol.action.OFActionOutput;
+import org.projectfloodlight.openflow.protocol.match.Match;
+import org.projectfloodlight.openflow.protocol.match.MatchField;
+import org.projectfloodlight.openflow.protocol.match.MatchFields;
+import org.projectfloodlight.openflow.protocol.oxm.OFOxm;
+import org.projectfloodlight.openflow.protocol.oxm.OFOxmInPort;
+import org.projectfloodlight.openflow.protocol.ver13.OFOxmInPortVer13;
+import org.projectfloodlight.openflow.types.OFPort;
+import org.projectfloodlight.openflow.types.U64;
+import org.projectfloodlight.openflow.types.U8;
+import org.projectfloodlight.openflow.types.OFBufferId;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
@@ -102,7 +107,6 @@ public class OVXLink extends Link<OVXPort, OVXSwitch> {
             final OVXPort srcPort, final OVXPort dstPort, RoutingAlgorithms alg)
             throws PortMappingException {
         super(srcPort, dstPort);
-        System.out.println("Creatinga new link with above ports..");
         this.linkId = linkId;
         this.tenantId = tenantId;
         srcPort.setOutLink(this);
@@ -117,7 +121,6 @@ public class OVXLink extends Link<OVXPort, OVXSwitch> {
         }
         this.srcPort.getPhysicalPort().removeOVXPort(this.srcPort);
         this.srcPort.getPhysicalPort().setOVXPort(this.srcPort);
-        System.out.println("Created a link..");
     }
 
     /**
@@ -191,8 +194,8 @@ public class OVXLink extends Link<OVXPort, OVXSwitch> {
                     "Add virtual link {} backup path (priority {}) between ports {}/{} - {}/{} in virtual network {}."
                             + "Path: {}", this.getLinkId(), U8.f(priority),
                     this.getSrcSwitch().getSwitchName(), this.srcPort
-                            .getPortNumber(), this.getDstSwitch()
-                            .getSwitchName(), this.dstPort.getPortNumber(),
+                            .getPortNo(), this.getDstSwitch()
+                            .getSwitchName(), this.dstPort.getPortNo(),
                     this.getTenantId(), physicalLinks);
         } else {
             try {
@@ -203,24 +206,24 @@ public class OVXLink extends Link<OVXPort, OVXSwitch> {
                                 + "in virtual network {}. Path: {}", this
                                 .getLinkId(), U8.f(priority), this
                                 .getSrcSwitch().getSwitchName(), this.srcPort
-                                .getPortNumber(), this.getDstSwitch()
-                                .getSwitchName(), this.dstPort.getPortNumber(),
+                                .getPortNo(), this.getDstSwitch()
+                                .getSwitchName(), this.dstPort.getPortNo(),
                         this.getTenantId(), physicalLinks);
                 log.info(
                         "Switch all existing flow-mods crossing the virtual link {} between ports ({}/{},{}/{})"
                                 + "to new path", this.getLinkId(), this
                                 .getSrcSwitch().getSwitchName(), this
-                                .getSrcPort().getPortNumber(), this
+                                .getSrcPort().getPortNo(), this
                                 .getDstSwitch().getSwitchName(), this
-                                .getDstPort().getPortNumber());
+                                .getDstPort().getPortNo());
             } catch (LinkMappingException e) {
                 log.debug(
                         "Create virtual link {} primary path (priority {}) between ports {}/{} - {}/{}"
                                 + "in virtual network {}. Path: {}", this
                                 .getLinkId(), U8.f(priority), this
                                 .getSrcSwitch().getSwitchName(), this.srcPort
-                                .getPortNumber(), this.getDstSwitch()
-                                .getSwitchName(), this.dstPort.getPortNumber(),
+                                .getPortNo(), this.getDstSwitch()
+                                .getSwitchName(), this.dstPort.getPortNo(),
                         this.getTenantId(), physicalLinks);
             }
             this.switchPath(physicalLinks, priority);
@@ -273,21 +276,63 @@ public class OVXLink extends Link<OVXPort, OVXSwitch> {
             for (OFAction act : fe.getActions()) {
                 if (act.getType() == OFActionType.OUTPUT) {
                     if (((OFActionOutput) act).getPort() == this.getSrcPort()
-                            .getPortNumber()) {
+                            .getPortNo()) {
                         try {
                             Integer flowId = this.map
                                     .getVirtualNetwork(this.tenantId)
                                     .getFlowManager()
                                     .storeFlowValues(
-                                            fe.getMatch().getDataLayerSource(),
-                                            fe.getMatch()
-                                                    .getDataLayerDestination());
-
-                            OVXFlowMod fm = fe.clone();
-                            fm.setCookie(((OVXFlowTable) this.getSrcPort()
+                                            ((OFMatchV1)fe.getMatch()).getEthSrc().getBytes(),
+                                            ((OFMatchV1)fe.getMatch()).getEthDst().getBytes()
+                                                    );
+                            if (fe.getCommand().equals(OFFlowModCommand.ADD))
+                            {
+                            OVXFlowAdd fm = OVXFactoryInst.myOVXFactory.buildOVXFlowAdd(fe.getXid(), fe.getMatch(), U64.of(((OVXFlowTable) this.getSrcPort()
                                     .getParentSwitch().getFlowTable())
-                                    .getCookie(fe, true));
+                                    .getCookie(fe, true)), fe.getIdleTimeout(), fe.getHardTimeout(), fe.getPriority(), fe.getBufferId(), fe.getOutPort(), fe.getFlags(), fe.getActions());
+ 
                             this.generateLinkFMs(fm, flowId);
+                            }
+                            if (fe.getCommand().equals(OFFlowModCommand.ADD))
+                            {
+                            OVXFlowAdd fm = OVXFactoryInst.myOVXFactory.buildOVXFlowAdd(fe.getXid(), fe.getMatch(), U64.of(((OVXFlowTable) this.getSrcPort()
+                                    .getParentSwitch().getFlowTable())
+                                    .getCookie(fe, true)), fe.getIdleTimeout(), fe.getHardTimeout(), fe.getPriority(), fe.getBufferId(), fe.getOutPort(), fe.getFlags(), fe.getActions());
+ 
+                            this.generateLinkFMs(fm, flowId);
+                            }
+                            else if (fe.getCommand().equals(OFFlowModCommand.DELETE))
+                            {
+                            OVXFlowDelete fm = OVXFactoryInst.myOVXFactory.buildOVXFlowDelete(fe.getXid(), fe.getMatch(), U64.of(((OVXFlowTable) this.getSrcPort()
+                                    .getParentSwitch().getFlowTable())
+                                    .getCookie(fe, true)), fe.getIdleTimeout(), fe.getHardTimeout(), fe.getPriority(), fe.getBufferId(), fe.getOutPort(), fe.getFlags(), fe.getActions());
+ 
+                            this.generateLinkFMs(fm, flowId);
+                            } if (fe.getCommand().equals(OFFlowModCommand.DELETE_STRICT))
+                            {
+                            OVXFlowDeleteStrict fm = OVXFactoryInst.myOVXFactory.buildOVXFlowDeleteStrict(fe.getXid(), fe.getMatch(), U64.of(((OVXFlowTable) this.getSrcPort()
+                                    .getParentSwitch().getFlowTable())
+                                    .getCookie(fe, true)), fe.getIdleTimeout(), fe.getHardTimeout(), fe.getPriority(), fe.getBufferId(), fe.getOutPort(), fe.getFlags(), fe.getActions());
+ 
+                            this.generateLinkFMs(fm, flowId);
+                            } if (fe.getCommand().equals(OFFlowModCommand.MODIFY))
+                            {
+                            OVXFlowModify fm = OVXFactoryInst.myOVXFactory.buildOVXFlowModify(fe.getXid(), fe.getMatch(), U64.of(((OVXFlowTable) this.getSrcPort()
+                                    .getParentSwitch().getFlowTable())
+                                    .getCookie(fe, true)), fe.getIdleTimeout(), fe.getHardTimeout(), fe.getPriority(), fe.getBufferId(), fe.getOutPort(), fe.getFlags(), fe.getActions());
+ 
+                            this.generateLinkFMs(fm, flowId);
+                            }
+                            if (fe.getCommand().equals(OFFlowModCommand.MODIFY_STRICT))
+                            {
+                            OVXFlowModifyStrict fm = OVXFactoryInst.myOVXFactory.buildOVXFlowModifyStrict(fe.getXid(), fe.getMatch(), U64.of(((OVXFlowTable) this.getSrcPort()
+                                    .getParentSwitch().getFlowTable())
+                                    .getCookie(fe, true)), fe.getIdleTimeout(), fe.getHardTimeout(), fe.getPriority(), fe.getBufferId(), fe.getOutPort(), fe.getFlags(), fe.getActions());
+ 
+                            this.generateLinkFMs(fm, flowId);
+                            }
+                            
+                            
                         } catch (IndexOutOfBoundException e) {
                             log.error(
                                     "Too many hosts to generate the flow pairs in this virtual network {}. "
@@ -348,12 +393,12 @@ public class OVXLink extends Link<OVXPort, OVXSwitch> {
     /**
      * Push the flow mod to all the intermediate switches of the virtual link.
      *
-     * @param fm
+     * @param fm_clone
      *            the original flow mod
      * @param flowId
      *            the flow identifier
      */
-    public void generateLinkFMs(final OVXFlowMod fm, final Integer flowId) {
+    public void generateLinkFMs(OFFlowMod fm_clone, final Integer flowId) {
         /*
          * Change the packet match: 1) change the fields where the virtual link
          * info are stored 2) change the fields where the physical IPs are
@@ -361,30 +406,32 @@ public class OVXLink extends Link<OVXPort, OVXSwitch> {
          */
         final OVXLinkUtils lUtils = new OVXLinkUtils(this.tenantId,
                 this.linkId, flowId);
-        lUtils.rewriteMatch(fm.getMatch());
+        lUtils.rewriteMatch(fm_clone.getMatch());
         long cookie = tenantId;
-        fm.setCookie(cookie << 32);
+        fm_clone=fm_clone.createBuilder().setCookie(U64.of(cookie << 32)).build();
 
-//        if (fm.getMatch().getDataLayerType() == Ethernet.TYPE_IPV4) {
-//            TenantMapper.rewriteMatch(this.tenantId, fm.getMatch());
-//        }
-        if (fm.getMatch().getDataLayerType() == Ethernet.TYPE_IPV4) {
-            if (GlobalConfig.bnvTagType == TAG.TOS) {
-                TenantMapperTos.rewriteMatch(this.tenantId, fm.getMatch());
+        if (((OFMatchV1)fm_clone.getMatch()).getEthType().getValue() == Ethernet.TYPE_IPV4) {
+			if (GlobalConfig.bnvTagType == TAG.TOS) {
+                TenantMapperTos.rewriteMatch(this.tenantId, (OFMatchV1) fm_clone.getMatch());
             } else if (GlobalConfig.bnvTagType == TAG.VLAN) {
-                TenantMapperVlan.rewriteMatch(this.tenantId, fm.getMatch());
-            } else if (GlobalConfig.bnvTagType == TAG.NOTAG) {
+                TenantMapperVlan.rewriteMatch(this.tenantId, (OFMatchV1) fm_clone.getMatch());
+            } else if (GlobalConfig.bnvTagType == TAG.IP) {
+				IPMapper.rewriteMatch(this.tenantId, fm_clone.getMatch());
+			} else if (GlobalConfig.bnvTagType == TAG.NOTAG) {
                     /* Do Nothing */
             }
+            
         }
+
         /*
          * Get the list of physical links mapped to this virtual link, in
          * REVERSE ORDER
          */
         PhysicalPort inPort = null;
         PhysicalPort outPort = null;
-        fm.setBufferId(OVXPacketOut.BUFFER_ID_NONE);
-        fm.setCommand(OFFlowMod.OFPFC_MODIFY);
+        fm_clone=fm_clone.createBuilder().setBufferId(OFBufferId.NO_BUFFER).build();
+        //.setCommand(OFFlowModCommand.MODIFY);
+        
         List<PhysicalLink> plinks = new LinkedList<PhysicalLink>();
         try {
             final OVXLink link = this.map.getVirtualNetwork(this.tenantId)
@@ -404,17 +451,23 @@ public class OVXLink extends Link<OVXPort, OVXSwitch> {
         for (final PhysicalLink phyLink : plinks) {
             if (outPort != null) {
                 inPort = phyLink.getSrcPort();
-                fm.getMatch().setInputPort(inPort.getPortNumber());
-                fm.setLengthU(OVXFlowMod.MINIMUM_LENGTH
-                        + OVXActionOutput.MINIMUM_LENGTH);
-                fm.setActions(Arrays.asList((OFAction) new OFActionOutput(
-                        outPort.getPortNumber(), (short) 0xffff)));
+                Match fm_clone_match=((OFMatchV1)fm_clone.getMatch())
+                .createBuilder()
+                .setInPort(inPort.getPortNo())
+                .build();
+                
+                OFAction fm_clone_action=OVXFactoryInst.myFactory.actions()
+                		.output(outPort.getPortNo(), (short) 0xffff);
+                fm_clone=fm_clone.createBuilder().setMatch(fm_clone_match)
+                		.setActions(Arrays.asList(fm_clone_action))
+                		.build();
+                
                 phyLink.getSrcPort().getParentSwitch()
-                        .sendMsg(fm, phyLink.getSrcPort().getParentSwitch());
+                        .sendMsg(fm_clone, phyLink.getSrcPort().getParentSwitch());
                 this.log.debug(
                         "Sending virtual link intermediate fm to sw {}: {}",
                         phyLink.getSrcPort().getParentSwitch().getSwitchName(),
-                        fm);
+                        fm_clone);
             }
             outPort = phyLink.getDstPort();
         }
@@ -425,6 +478,118 @@ public class OVXLink extends Link<OVXPort, OVXSwitch> {
         } catch (final InterruptedException e) {
             log.warn("Timeout interrupted; might be a problem if you are running POX.");
         }
+    }
+
+    /**
+     * Push the flow mod to all the intermediate switches of the virtual link.
+     *
+     * @param fm_clone
+     *            the original flow mod
+     * @param flowId
+     *            the flow identifier
+     */
+    public void generateLinkFMsV3(OFFlowMod fm_clone, final Integer flowId) {
+        /*
+         * Change the packet match: 1) change the fields where the virtual link
+         * info are stored 2) change the fields where the physical IPs are
+         * stored
+         */
+        System.out.println("Generating link fms");
+        final OVXLinkUtils lUtils = new OVXLinkUtils(this.tenantId,
+                this.linkId, flowId);
+        lUtils.rewriteMatch(fm_clone.getMatch());
+        long cookie = tenantId;
+        fm_clone=fm_clone.createBuilder().setCookie(U64.of(cookie << 32)).build();
+        System.out.println(fm_clone.getMatch().toString());
+        if (((OFMatchV3)fm_clone.getMatch()).get(MatchField.ETH_TYPE).getValue() == Ethernet.TYPE_IPV4) {
+			if (GlobalConfig.bnvTagType == TAG.TOS) {
+                TenantMapperTos.rewriteMatch(this.tenantId, (OFMatchV3) fm_clone.getMatch());
+            } else if (GlobalConfig.bnvTagType == TAG.VLAN) {
+                TenantMapperVlan.rewriteMatch(this.tenantId, (OFMatchV3) fm_clone.getMatch());
+            } else if (GlobalConfig.bnvTagType == TAG.IP) {
+				IPMapper.rewriteMatch(this.tenantId, fm_clone.getMatch());
+			} else if (GlobalConfig.bnvTagType == TAG.NOTAG) {
+                    /* Do Nothing */
+            }
+        }
+
+        System.out.println("After rewritematch" +fm_clone.getMatch().toString());
+
+        /*
+         * Get the list of physical links mapped to this virtual link, in
+         * REVERSE ORDER
+         */
+        PhysicalPort inPort = null;
+        PhysicalPort outPort = null;
+        fm_clone=fm_clone.createBuilder().setBufferId(OFBufferId.NO_BUFFER).build();
+        //.setCommand(OFFlowModCommand.MODIFY);
+
+        List<PhysicalLink> plinks = new LinkedList<PhysicalLink>();
+        try {
+            final OVXLink link = this.map.getVirtualNetwork(this.tenantId)
+                    .getLink(this.srcPort, this.dstPort);
+            for (final PhysicalLink phyLink : OVXMap.getInstance()
+                    .getPhysicalLinks(link)) {
+                plinks.add(new PhysicalLink(phyLink.getDstPort(), phyLink
+                        .getSrcPort()));
+            }
+        } catch (LinkMappingException | NetworkMappingException e) {
+            log.warn("No physical Links mapped to OVXLink? : {}", e);
+            return;
+        }
+
+        Collections.reverse(plinks);
+
+        for (final PhysicalLink phyLink : plinks) {
+            if (outPort != null) {
+                inPort = phyLink.getSrcPort();
+                Match fm_clone_match=addtoMatch((OFMatchV3)fm_clone.getMatch(), inPort.getPortNo());
+
+                System.out.println("Match after ading inport "+ fm_clone_match);
+
+                OFAction fm_clone_action=OVXFactoryInst.myFactory.actions()
+                        .output(outPort.getPortNo(), (short) 0xffff);
+                fm_clone=fm_clone.createBuilder().setMatch(fm_clone_match)
+                        .setActions(Arrays.asList(fm_clone_action))
+                        .build();
+
+                phyLink.getSrcPort().getParentSwitch()
+                        .sendMsg(fm_clone, phyLink.getSrcPort().getParentSwitch());
+                this.log.debug(
+                        "Sending virtual link intermediate fm to sw {}: {}",
+                        phyLink.getSrcPort().getParentSwitch().getSwitchName(),
+                        fm_clone);
+            }
+            outPort = phyLink.getDstPort();
+        }
+        // TODO: With POX we need to put a timeout between this flows and the
+        // first flow mod. Check how to solve.
+        try {
+            Thread.sleep(5);
+        } catch (final InterruptedException e) {
+            log.warn("Timeout interrupted; might be a problem if you are running POX.");
+        }
+    }
+
+    private OFMatchV3 addtoMatch(OFMatchV3 myMatch, OFPort port) {
+        OFMatchV3 newMatch;
+        OFOxmList myList = myMatch.getOxmList();
+        OFOxmInPort oxmInPort = new OFOxmInPortVer13(port);
+        Map <MatchFields, OFOxm<?>> oxmMap = new LinkedHashMap<>();
+        oxmMap.put(MatchFields.IN_PORT, oxmInPort);
+        for (OFOxm<?> ofOxm : myList) {
+            if (ofOxm instanceof OFOxmInPort) continue;
+            System.out.println(ofOxm.getMatchField().id.toString());
+            oxmMap.put(ofOxm.getMatchField().id, ofOxm);
+        }
+
+        OFOxmList oxmList = new OFOxmList(oxmMap);
+        System.out.println(myList.toString());
+
+        System.out.println(oxmList.toString());
+        newMatch = OVXFactoryInst.myFactory.buildMatchV3().setOxmList(oxmList).build();
+        return newMatch;
+
     }
 
     /**

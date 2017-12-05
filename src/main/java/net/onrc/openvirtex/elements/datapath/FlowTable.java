@@ -19,6 +19,7 @@ import java.util.Collection;
 
 import net.onrc.openvirtex.exceptions.MappingException;
 import net.onrc.openvirtex.messages.OVXFlowMod;
+import net.onrc.openvirtex.messages.OVXFlowMod;
 
 /**
  * Base interface for the flow table.

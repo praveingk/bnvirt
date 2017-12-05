@@ -19,35 +19,54 @@ import java.util.BitSet;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.openflow.protocol.OFPort;
-import org.openflow.util.U16;
+import org.projectfloodlight.openflow.protocol.OFFactories;
+import org.projectfloodlight.openflow.protocol.OFVersion;
+import org.projectfloodlight.openflow.types.OFPort;
+import org.projectfloodlight.openflow.types.U16;
 
 import net.onrc.openvirtex.core.OpenVirteXController;
+import net.onrc.openvirtex.core.OVXFactoryInst;
 import net.onrc.openvirtex.elements.link.OVXLinkField;
 import net.onrc.openvirtex.exceptions.DuplicateIndexException;
 import net.onrc.openvirtex.exceptions.IndexOutOfBoundException;
+import org.projectfloodlight.openflow.types.U32;
 
 public class BitSetIndex {
     private static Logger log = LogManager.getLogger(BitSetIndex.class.getName());
     private BitSet set;
     private IndexType type;
 
+   	static short OFPORT_OFPP_MAX = (short) 0xFF00;//1.0
+	static long OFPORT_OFPP_MAX_NEW = U32.f(0xFFffFF00);//1.1+
+	
     public enum IndexType {
         /*
          * Each index type is associated with the biggest index it can accept.
          * When the user request a new id, the class check if an id in the range
          * from 1 to the biggest index is available.
          */
-        TENANT_ID((int) Math.pow(2, OpenVirteXController.getInstance()
-                .getNumberVirtualNets())), SWITCH_ID((int) Math.pow(2, 32)), LINK_ID(
-                getLinkMaxValue()), ROUTE_ID((int) Math.pow(2, 24)), PORT_ID(
-                U16.f(OFPort.OFPP_MAX.getValue())), FLOW_ID((int) Math.pow(2,
-                24)), HOST_ID((int) Math.pow(2, 32)), FLOW_COUNTER(
-                getLinkMaxValue()), IP_ID((int) Math
-                .pow(2, (32 - OpenVirteXController.getInstance()
-                        .getNumberVirtualNets()))), DEFAULT(1000);
 
-        protected Integer value;
+        TENANT_ID((int) Math.pow(2, OpenVirteXController.getInstance()
+                .getNumberVirtualNets())),
+                SWITCH_ID((int) Math.pow(2, 32)), 
+                LINK_ID(getLinkMaxValue()), 
+                ROUTE_ID((int) Math.pow(2, 24)), 
+                PORT_ID(OVXFactoryInst.ofversion==10?U16.f(OFPORT_OFPP_MAX): OFPORT_OFPP_MAX_NEW),
+                FLOW_ID((int) Math.pow(2,24)), 
+                HOST_ID((int) Math.pow(2, 32)), 
+                FLOW_COUNTER(getLinkMaxValue()), 
+                IP_ID((int) Math.pow(2, (32 - OpenVirteXController.getInstance()
+                        .getNumberVirtualNets()))), 
+                DEFAULT(1000);
+
+        protected Long value;
+
+
+
+        IndexType(long l) {
+            this.value = l;
+        }
+
 
         private static Integer getLinkMaxValue() {
             if (OpenVirteXController.getInstance().getOvxLinkField().getValue() == OVXLinkField.MAC_ADDRESS
@@ -64,10 +83,10 @@ public class BitSetIndex {
         }
 
         private IndexType(final Integer value) {
-            this.value = value;
+            this.value = (long) value;
         }
 
-        private Integer getValue() {
+        private Long getValue() {
             return this.value;
         }
 
@@ -106,6 +125,7 @@ public class BitSetIndex {
 
     public synchronized Integer getNewIndex(Integer index)
             throws IndexOutOfBoundException, DuplicateIndexException {
+        System.out.println("Inside getNewIndex "+ index +","+ type.getValue().intValue() + ", "+ type.getValue()+ ", "+ Long.toHexString(type.getValue()));
         if (index < type.getValue()) {
             if (!this.set.get(index)) {
                 this.set.flip(index);

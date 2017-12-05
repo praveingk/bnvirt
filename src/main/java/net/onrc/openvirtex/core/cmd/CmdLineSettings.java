@@ -18,6 +18,7 @@ package net.onrc.openvirtex.core.cmd;
 import net.onrc.openvirtex.util.OVXUtil;
 
 import org.kohsuke.args4j.Option;
+import org.projectfloodlight.openflow.protocol.OFVersion;
 
 import com.mongodb.ServerAddress;
 
@@ -26,7 +27,11 @@ import com.mongodb.ServerAddress;
  * getters.
  */
 public class CmdLineSettings {
-    /**
+	/**
+	 * Default OpenFlow version
+	 */
+	public static final Integer DEFAULT_OF_VERSION =10; 
+    /*
      * Default OVX host.
      */
     public static final String DEFAULT_OF_HOST = "0.0.0.0";
@@ -66,6 +71,10 @@ public class CmdLineSettings {
      * Default value if BDDP is used for discovery.
      */
     public static final Boolean DEFAULT_USE_BDDP = false;
+    
+
+    @Option(name = "-v", aliases = "--of-version", metaVar = "INT", usage = "OpenVirteX OpenFlow version")
+    private Integer ofVersion = CmdLineSettings.DEFAULT_OF_VERSION;
 
     @Option(name = "-p", aliases = "--of-port", metaVar = "INT", usage = "OpenVirteX OpenFlow listen port")
     private Integer ofPort = CmdLineSettings.DEFAULT_OF_PORT;
@@ -96,6 +105,16 @@ public class CmdLineSettings {
 
     @Option(name = "--ub", aliases = "--use-bddp", usage = "Use BDDP for network discovery; only use if you know what you are doing.")
     private Boolean useBDDP = CmdLineSettings.DEFAULT_USE_BDDP;
+    
+    /**
+     * Gets the OF Version OVX is running.
+     *
+     * @return the OpenFlow host
+     */
+    public int getOFVersion() {
+        return this.ofVersion;
+    }
+    
 
     /**
      * Gets the host OVX is running on.
