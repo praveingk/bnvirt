@@ -76,8 +76,8 @@ public class ReconnectHandler extends SimpleChannelHandler {
         this.timeout = this.timer.newTimeout(new ReconnectTimeoutTask(this.sw,
                 this.cg), backOffTime, TimeUnit.SECONDS);
 
-        this.log.error("Backing off {} for controller {}", backOffTime,
-                this.bootstrap.getOption("remoteAddress"));
+//        this.log.error("Backing off {} for controller {}", backOffTime,
+//                this.bootstrap.getOption("remoteAddress"));
         ctx.sendUpstream(e);
 
     }
@@ -133,11 +133,11 @@ public class ReconnectHandler extends SimpleChannelHandler {
                         ReconnectTimeoutTask.this.sw.setChannel(e.getChannel());
                         ReconnectTimeoutTask.this.cg.add(e.getChannel());
                     } else {
-                        ReconnectHandler.this.log
-                                .error("Failed to connect to controller {} for switch {}",
-                                        remoteAddr,
-                                        ReconnectTimeoutTask.this.sw
-                                                .getSwitchName());
+//                        ReconnectHandler.this.log
+//                                .error("Failed to connect to controller {} for switch {}",
+//                                        remoteAddr,
+//                                        ReconnectTimeoutTask.this.sw
+//                                                .getSwitchName());
                     }
 
                 }

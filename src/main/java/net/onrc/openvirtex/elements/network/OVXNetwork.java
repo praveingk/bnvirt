@@ -271,17 +271,20 @@ public class OVXNetwork extends Network<OVXSwitch, OVXPort, OVXLink> implements
         }
         if (dpids.size() == 1) {
             virtualSwitch = new OVXSingleSwitch(switchId, this.tenantId);
+            System.out.println("Is a Single Switch.");
         } else {
             virtualSwitch = new OVXBigSwitch(switchId, this.tenantId);
+            System.out.println("Is a Big Switch.");
         }
         // Add switch to topology and register it in the map
         this.addSwitch(virtualSwitch);
 
         virtualSwitch.register(switches);
+
         if (this.isBooted) {
             virtualSwitch.boot();
         }
-
+        System.out.println("Created vSwitch switchID:"+ Long.toHexString(switchId));
         return virtualSwitch;
     }
 

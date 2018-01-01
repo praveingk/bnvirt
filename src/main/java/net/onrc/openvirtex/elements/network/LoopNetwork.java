@@ -34,6 +34,75 @@ public class LoopNetwork {
         isInitialized = false;
     }
 
+    public static void initBNVirtSwitch(PhysicalSwitch mySwitch) {
+        System.out.println("Initialize BNVirt N/W for "+ Long.toHexString(mySwitch.getSwitchId()));
+        ArrayList<DPIDandPortPair> addPorts = new ArrayList<>();
+        // Make the below 12 for NCL Production
+        int totalLoopPorts = 12;
+        short startport = 25;
+        // Remove 48 for for NCL Production
+        short[] backbonePorts = {55,56,57,58};
+        PhysicalNetwork myNet = PhysicalNetwork.getInstance();
+        Set<PhysicalSwitch> addedSwitches = myNet.getSwitches();
+        // Create Loop Ports First
+        System.out.println("Creating links for loop ports for Switch :"+ Long.toHexString(mySwitch.getSwitchId()));
+        short port = startport;
+        for (short i = 0; i < totalLoopPorts; i++) {
+            DPIDandPort srcDP = new DPIDandPort(mySwitch.getSwitchId(), (short) (port));
+            port++;
+            DPIDandPort dstDP = new DPIDandPort(mySwitch.getSwitchId(), (short) (port));
+            DPIDandPortPair loopPair = new DPIDandPortPair(srcDP, dstDP);
+            addPorts.add(loopPair);
+            System.out.println(loopPair.toString());
+            port++;
+        }
+
+        // Create BackBone links
+
+        for (PhysicalSwitch otherSwitch : addedSwitches) {
+            if (mySwitch.equals(otherSwitch)) {
+                continue;
+            }
+            System.out.println("Creating links for backbone ports for Switch :"+ Long.toHexString(mySwitch.getSwitchId())+ " and "+ Long.toHexString(otherSwitch.getSwitchId()));
+            for  (short backbonePort : backbonePorts) {
+                DPIDandPort srcDP = new DPIDandPort(mySwitch.getSwitchId(), backbonePort);
+                DPIDandPort dstDP = new DPIDandPort(otherSwitch.getSwitchId(), backbonePort);
+                DPIDandPortPair corePair = new DPIDandPortPair(srcDP, dstDP);
+                addPorts.add(corePair);
+                System.out.println(corePair.toString());
+            }
+
+        }
+
+        for (int i=0;i< addPorts.size();i++) {
+            DPIDandPortPair myPair = addPorts.get(i);
+            System.out.println(myNet.dpidMap.toString());
+
+            PhysicalSwitch sSwitch = myNet.getSwitch(myPair.getSrc().getDpid());
+            if (sSwitch == null) {
+                System.out.println("sSwitch is null!");
+                continue;
+            }
+            PhysicalPort sPort = sSwitch.getPort(myPair.getSrc().getPort());
+            if (sPort == null) {
+                System.out.println("sPort is null!");
+                continue;
+            }
+            PhysicalSwitch dSwitch = myNet.getSwitch(myPair.getDst().getDpid());
+            if (sSwitch == null) {
+                System.out.println("dSwitch is null!");
+                continue;
+            }
+            PhysicalPort dPort = dSwitch.getPort(myPair.getDst().getPort());
+            if (dPort == null ) {
+                System.out.println("dPort is null!");
+                continue;
+            }
+            myNet.createLink(sPort,dPort);
+            myNet.createLink(dPort,sPort);
+        }
+    }
+
     public static void initialize() {
         System.out.println("Initializing Loop ports..");
         // Make the below 12 for NCL Production

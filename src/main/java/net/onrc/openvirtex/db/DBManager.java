@@ -140,7 +140,7 @@ public final class DBManager {
             }
 
         } catch (Exception e) {
-            log.error("Failed to initialize database: {}", e.getMessage());
+            log.error("Failed to initialize database: {}", e.getStackTrace());
         } finally {
             // Restore error stream
             System.setErr(ps);
@@ -362,13 +362,18 @@ public final class DBManager {
             DBCollection coll = this.collections.get(DBManager.DB_VNET);
             DBCursor cursor = coll.find();
             log.info("Loading {} virtual networks from database", cursor.size());
+            System.out.println("Starting to load networks from DB...");
             while (cursor.hasNext()) {
                 OVXNetworkManager mngr = null;
                 Map<String, Object> vnet = cursor.next().toMap();
                 try {
-                    // Create vnet manager for each virtual network
+                    // Create vnet manager for each virtual networkovxnet
+                    System.out.println("Creating OVX Manager");
                     mngr = new OVXNetworkManager(vnet);
+                    System.out.println("Created OVX Manager");
                     OVXNetwork.reserveTenantId(mngr.getTenantId());
+                    System.out.println("Reserved tenant id : "+ mngr.getTenantId());
+
                     // Accessing DB_KEY field through a class derived from the
                     // abstract OVXSwitch
                     List<Map<String, Object>> switches = (List<Map<String, Object>>) vnet
@@ -379,10 +384,16 @@ public final class DBManager {
                             .get(Port.DB_KEY);
                     List<Map<String, Object>> routes = (List<Map<String, Object>>) vnet
                             .get(SwitchRoute.DB_KEY);
+                    System.out.println("Initialized Lists..");
                     this.readOVXSwitches(switches, mngr);
+                    System.out.println("Read OVX Switches.");
                     this.readOVXLinks(links, mngr);
+                    System.out.println("Read OVX Links.");
                     this.readOVXPorts(ports, mngr);
+                    System.out.println("Read OVX Ports.");
                     this.readOVXRoutes(routes, mngr);
+                    System.out.println("Read OVX Routes.");
+
                     DBManager.log
                             .info("Virtual network {} waiting for {} switches, {} links and {} ports",
                                     mngr.getTenantId(), mngr.getSwitchCount(),

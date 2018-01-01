@@ -24,7 +24,7 @@ import com.mongodb.DB;
 import com.mongodb.MongoClient;
 
 public class MongoConnection implements DBConnection {
-    private static final String DB_NAME = "OVX";
+    private static final String DB_NAME = "BNVirt";
     private MongoClient mongo;
 
     private static Logger log = LogManager.getLogger(MongoConnection.class

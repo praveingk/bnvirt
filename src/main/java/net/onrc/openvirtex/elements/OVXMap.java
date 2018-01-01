@@ -488,12 +488,12 @@ public final class OVXMap implements Mappable {
     public OVXSwitch getVirtualSwitch(final PhysicalSwitch physicalSwitch,
                                       final Integer port, final Integer tenantId) throws SwitchMappingException {
         PhysicalSwitchPort myPSP = new PhysicalSwitchPort(physicalSwitch, port, tenantId);
-//        System.out.println("getting Mapping of ("+ physicalSwitch.getSwitchName()+ ", " + port+","+ tenantId);
-//        System.out.println("Dumping the physicalSwitchPortMap..");
-//        Set<PhysicalSwitchPort> psps = this.physicalSwitchPortMap.keySet();
-//        for (PhysicalSwitchPort psp : psps) {
-//            System.out.println(psp.toString() + "  "+ physicalSwitchPortMap.get(psp));
-//        }
+        //System.out.println("getting Mapping of ("+ physicalSwitch.getSwitchName()+ ", " + port+","+ tenantId);
+        //System.out.println("Dumping the physicalSwitchPortMap..");
+        //Set<PhysicalSwitchPort> psps = this.physicalSwitchPortMap.keySet();
+        //for (PhysicalSwitchPort psp : psps) {
+        //    System.out.println(psp.toString() + "  "+ physicalSwitchPortMap.get(psp));
+        //}
         OVXSwitch vsw = this.physicalSwitchPortMap.get(myPSP);
 
         if (vsw == null) {

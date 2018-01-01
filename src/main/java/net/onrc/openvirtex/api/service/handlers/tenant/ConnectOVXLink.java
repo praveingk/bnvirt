@@ -83,8 +83,8 @@ public class ConnectOVXLink extends ApiHandler<Map<String, Object>> {
             final OVXNetwork virtualNetwork = map.getVirtualNetwork(tenantId
                     .intValue());
 
-            PhysicalNetwork myNet = PhysicalNetwork.getInstance();
-            myNet.initializeLoopPorts();
+            //PhysicalNetwork myNet = PhysicalNetwork.getInstance();
+            //myNet.initializeLoopPorts();
 //            if (LoopNetwork.IsLoop(srcDpid.longValue(), srcPort.shortValue(),
 //                    dstDpid.longValue(), dstPort.shortValue())) {
 //                System.out.println("This is a loop port pair.. Lazy link Creation now");

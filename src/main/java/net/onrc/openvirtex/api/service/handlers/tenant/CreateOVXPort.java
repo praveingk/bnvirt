@@ -91,7 +91,7 @@ public class CreateOVXPort extends ApiHandler<Map<String, Object>> {
                     physdpid.longValue(), port.shortValue());
 
 
-            //System.out.println("Creating a virtual Port for "+ Long.toHexString(physdpid.longValue())+ " and port "+ port.shortValue());
+            System.out.println("Creating a virtual Port for "+ Long.toHexString(physdpid.longValue())+ " and port "+ port.shortValue());
             final OVXPort ovxPort = virtualNetwork.createPort(physdpid.longValue(),
                     port.shortValue());
 

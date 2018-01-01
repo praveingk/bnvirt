@@ -205,6 +205,8 @@ public class PhysicalSwitch extends Switch<PhysicalPort> {
         PhysicalNetwork.getInstance().addSwitch(this);
         this.fillPortMap();
         this.statsMan.start();
+        System.out.println("Switch "+Long.toHexString(this.switchId) + "booted up");
+        LoopNetwork.initBNVirtSwitch(this);
         return true;
     }
 
