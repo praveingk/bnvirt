@@ -32,7 +32,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import com.google.common.hash.PrimitiveSink;
 import com.google.common.hash.Funnel;
 
-class OFMeterModVer13 implements OFMeterMod {
+public class OFMeterModVer13 implements OFMeterMod {
     private static final Logger logger = LoggerFactory.getLogger(OFMeterModVer13.class);
     // version: 1.3
     final static byte WIRE_VERSION = 4;
@@ -57,7 +57,7 @@ class OFMeterModVer13 implements OFMeterMod {
     );
 
     // package private constructor - used by readers, builders, and factory
-    OFMeterModVer13(long xid, int command, int flags, long meterId, List<OFMeterBand> meters) {
+    protected OFMeterModVer13(long xid, int command, int flags, long meterId, List<OFMeterBand> meters) {
         if(meters == null) {
             throw new NullPointerException("OFMeterModVer13: property meters cannot be null");
         }

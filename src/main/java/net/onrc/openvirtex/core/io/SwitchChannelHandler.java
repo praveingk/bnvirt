@@ -918,9 +918,9 @@ public class SwitchChannelHandler extends OFChannelHandler {
            // final List<OFMessage> msglist = (List<OFMessage>) e.getMessage();
 
            // for (final OFMessage ofm : msglist) {
-            System.out.println("***Ging to parse message");
+            //System.out.println("***Ging to parse message");
         	OFMessage ofm=(OFMessage) e.getMessage();
-            System.out.println("Inside Message received :"+ofm.toString() );
+            //System.out.println("Inside Message received :"+ofm.toString() );
         	
 //                try {
 

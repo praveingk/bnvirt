@@ -34,6 +34,7 @@ import net.onrc.openvirtex.exceptions.*;
 import net.onrc.openvirtex.messages.OVXFlowAdd;
 import net.onrc.openvirtex.messages.OVXFlowMod;
 import net.onrc.openvirtex.messages.OVXMessageUtil;
+import net.onrc.openvirtex.messages.OVXMeterMod;
 import net.onrc.openvirtex.messages.actions.*;
 import net.onrc.openvirtex.messages.actions.ver13.OVXActionSetFieldVer13;
 import net.onrc.openvirtex.packet.Ethernet;
@@ -50,6 +51,8 @@ import org.projectfloodlight.openflow.protocol.instruction.OFInstructionApplyAct
 import org.projectfloodlight.openflow.protocol.match.Match;
 import org.projectfloodlight.openflow.protocol.match.MatchField;
 import org.projectfloodlight.openflow.protocol.match.MatchFields;
+import org.projectfloodlight.openflow.protocol.meterband.OFMeterBand;
+import org.projectfloodlight.openflow.protocol.meterband.OFMeterBandDrop;
 import org.projectfloodlight.openflow.protocol.oxm.OFOxm;
 import org.projectfloodlight.openflow.protocol.oxm.OFOxmInPort;
 import org.projectfloodlight.openflow.protocol.oxm.OFOxmIpv4Dst;
@@ -217,6 +220,9 @@ public class OVXFlowAddVer13 extends OFFlowAddVer13 implements OVXFlowAdd {
             }
         } else {
             prepAndSendSouth(ovxInPort, pflag);
+
+            System.out.println("Done with Flowmod. Lets try adding a meter");
+            createMeter(sw);
         }
     }
 
@@ -439,5 +445,17 @@ public class OVXFlowAddVer13 extends OFFlowAddVer13 implements OVXFlowAdd {
         this.cookie = U64.of(tmp);
     }
 
+    public void createMeter(OVXSwitch sw) {
+        OVXMeterMod meterMod = null;
+        int command = 0x0; //ADD
+        int flags = 0x0;
+        long meterId = 0x1;
+        OFMeterBandDrop ofm = new OFMeterBandDropVer13(1000, 1000);
+        List<OFMeterBand> ofmlist = new ArrayList<>();
+        ofmlist.add(ofm);
+        meterMod = OVXFactoryInst.myOVXFactory.buildOVXMeterMod(this.getXid(), command, flags, meterId, ofmlist);
+        System.out.println("Creating Meter");
+        meterMod.devirtualize(sw);
+    }
 
 }

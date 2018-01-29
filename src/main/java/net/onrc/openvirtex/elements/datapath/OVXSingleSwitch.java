@@ -15,12 +15,16 @@
  ******************************************************************************/
 package net.onrc.openvirtex.elements.datapath;
 
+import net.onrc.openvirtex.elements.Mapper.MeterMap;
 import net.onrc.openvirtex.elements.port.OVXPort;
 import net.onrc.openvirtex.exceptions.SwitchMappingException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.projectfloodlight.openflow.protocol.OFMessage;
+import org.projectfloodlight.openflow.protocol.meterband.OFMeterBand;
+import org.projectfloodlight.openflow.protocol.meterband.OFMeterBandDrop;
+import org.projectfloodlight.openflow.protocol.ver13.OFMeterBandDropVer13;
 
 public class OVXSingleSwitch extends OVXSwitch {
 
@@ -40,6 +44,15 @@ public class OVXSingleSwitch extends OVXSwitch {
             this.portMap.remove(portNumber);
             return true;
         }
+    }
+
+    @Override
+    public boolean initializeMeters() {
+        OFMeterBandDrop myband = new OFMeterBandDropVer13(1000, 1000);
+        for (short port :this.getPorts().keySet()) {
+            MeterMap.createMeter(this.getPorts().get(port), myband);
+        }
+        return true;
     }
 
     @Override

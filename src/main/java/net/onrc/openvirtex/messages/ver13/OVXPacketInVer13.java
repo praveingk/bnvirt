@@ -467,10 +467,10 @@ public class OVXPacketInVer13 extends OFPacketInVer13 implements OVXPacketIn {
         	wildcards.add(OFFlowWildcards.IN_PORT);
         }
 
-        System.out.println("Pravein : Printing packet Bytes");
-        for (byte packetByte: packetData) {
-            System.out.print (String.format("%02X ", packetByte));
-        }
+//        System.out.println("Pravein : Printing packet Bytes");
+//        for (byte packetByte: packetData) {
+//            System.out.print (String.format("%02X ", packetByte));
+//        }
         System.out.println();
         assert limit >= 14;
         // dl dst

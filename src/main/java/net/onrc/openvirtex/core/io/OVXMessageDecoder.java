@@ -34,6 +34,8 @@ import org.projectfloodlight.openflow.protocol.errormsg.OFPortModFailedErrorMsg;
 import org.projectfloodlight.openflow.protocol.errormsg.OFQueueOpFailedErrorMsg;
 import org.projectfloodlight.openflow.protocol.ver10.OFNiciraControllerRoleReplyVer10;
 import org.projectfloodlight.openflow.protocol.ver10.OFNiciraControllerRoleRequestVer10;
+import org.projectfloodlight.openflow.protocol.ver13.OFGroupAddVer13;
+import org.projectfloodlight.openflow.protocol.ver13.OFMeterModVer13;
 import org.projectfloodlight.openflow.types.OFBufferId;
 import org.projectfloodlight.openflow.types.OFErrorCauseData;
 import org.projectfloodlight.openflow.types.OFPort;
@@ -63,7 +65,7 @@ public class OVXMessageDecoder extends FrameDecoder {
         {
             String class_name=message.getClass().getName();
             String of_message_type=class_name.substring(class_name.lastIndexOf(".") + 1);
-            System.out.println("Inside OVX decode. "+ of_message_type);
+            //System.out.println("Inside OVX decode. "+ of_message_type);
             if(of_message_type.equals("OFHelloVer10"))
                 ovxmessage=OVXFactoryInst.myOVXFactory.buildOVXHello(((OFHello)message).getXid());
             else if(of_message_type.equals("OFAggregateStatsReplyVer10"))
@@ -251,9 +253,17 @@ public class OVXMessageDecoder extends FrameDecoder {
                 ovxmessage = OVXFactoryInst.myOVXFactory.buildOVXTableFeaturesStatsRequest(((OFTableFeaturesStatsRequest)message).getXid(),((OFTableFeaturesStatsRequest) message).getFlags(), ((OFTableFeaturesStatsRequest) message).getEntries());
             else if(of_message_type.equals("OFTableFeaturesStatsReplyVer13"))
                 ovxmessage = OVXFactoryInst.myOVXFactory.buildOVXTableFeaturesStatsReply(((OFTableFeaturesStatsReply)message).getXid(),((OFTableFeaturesStatsReply) message).getFlags(), ((OFTableFeaturesStatsReply) message).getEntries());
+            else if(of_message_type.equals("OFGroupAddVer13"))
+                ovxmessage = OVXFactoryInst.myOVXFactory.buildOVXGroupAdd(((OFGroupAddVer13)message).getXid(),((OFGroupAddVer13)message).getGroupType(), ((OFGroupAddVer13)message).getGroup(), ((OFGroupAddVer13)message).getBuckets());
+            else if(of_message_type.equals("OFMeterModVer13"))
+                ovxmessage = OVXFactoryInst.myOVXFactory.buildOVXMeterMod(((OFMeterModVer13)message).getXid(),((OFMeterModVer13)message).getCommand(), ((OFMeterModVer13)message).getFlags(), ((OFMeterModVer13)message).getMeterId(), ((OFMeterModVer13)message).getBands());
 
         }
-        System.out.println("of   "+message+"   ovx  "+ovxmessage);
+        if (ovxmessage != null) {
+            System.out.println("OFDecoding:  " + message.getType().name() + "  -> OVX: " + ovxmessage.getType().name());
+        } else {
+            System.out.println("OFDecoding:  " + message + "  -> OVX: null");
+        }
         return ovxmessage;
         
         

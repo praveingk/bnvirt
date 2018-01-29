@@ -26,6 +26,7 @@ import net.onrc.openvirtex.protocol.OVXMatchV3;
 import org.projectfloodlight.openflow.protocol.*;
 import org.projectfloodlight.openflow.protocol.instruction.OFInstruction;
 import org.projectfloodlight.openflow.protocol.match.Match;
+import org.projectfloodlight.openflow.protocol.meterband.OFMeterBand;
 import org.projectfloodlight.openflow.protocol.oxm.OFOxm;
 import org.projectfloodlight.openflow.types.*;
 import org.projectfloodlight.openflow.protocol.action.OFAction;
@@ -413,4 +414,9 @@ public interface OVXFactory{
 	OVXActionPopVlan buildOVXActionPopVlan();
 
 	OVXActionPushVlan buildOVXActionPushVlan(EthType ethType);
+
+    OVXMeterMod buildOVXGroupAdd(long xid, OFGroupType groupType, OFGroup group, List<OFBucket> buckets);
+
+	OVXMeterMod buildOVXMeterMod(long xid,  int command, int flags, long meterId, List<OFMeterBand> meterbands);
+
 }

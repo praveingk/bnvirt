@@ -225,6 +225,11 @@ public class PhysicalSwitch extends Switch<PhysicalPort> {
         return true;
     }
 
+    @Override
+    public boolean initializeMeters() {
+        return false;
+    }
+
     /**
      * Removes this PhysicalSwitch from the network. Also removes associated
      * ports, links, and virtual elements mapped to it (OVX*Switch, etc.).

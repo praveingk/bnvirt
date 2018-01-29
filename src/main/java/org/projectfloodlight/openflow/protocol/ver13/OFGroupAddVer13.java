@@ -32,7 +32,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import com.google.common.hash.PrimitiveSink;
 import com.google.common.hash.Funnel;
 
-class OFGroupAddVer13 implements OFGroupAdd {
+public class OFGroupAddVer13 implements OFGroupAdd {
     private static final Logger logger = LoggerFactory.getLogger(OFGroupAddVer13.class);
     // version: 1.3
     final static byte WIRE_VERSION = 4;
@@ -50,7 +50,7 @@ class OFGroupAddVer13 implements OFGroupAdd {
 //
 
     // package private constructor - used by readers, builders, and factory
-    OFGroupAddVer13(long xid, OFGroupType groupType, OFGroup group, List<OFBucket> buckets) {
+    protected OFGroupAddVer13(long xid, OFGroupType groupType, OFGroup group, List<OFBucket> buckets) {
         if(groupType == null) {
             throw new NullPointerException("OFGroupAddVer13: property groupType cannot be null");
         }

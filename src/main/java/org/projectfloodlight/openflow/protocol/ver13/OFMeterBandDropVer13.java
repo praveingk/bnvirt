@@ -30,7 +30,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import com.google.common.hash.PrimitiveSink;
 import com.google.common.hash.Funnel;
 
-class OFMeterBandDropVer13 implements OFMeterBandDrop {
+public class OFMeterBandDropVer13 implements OFMeterBandDrop {
     private static final Logger logger = LoggerFactory.getLogger(OFMeterBandDropVer13.class);
     // version: 1.3
     final static byte WIRE_VERSION = 4;
@@ -49,7 +49,7 @@ class OFMeterBandDropVer13 implements OFMeterBandDrop {
     );
 
     // package private constructor - used by readers, builders, and factory
-    OFMeterBandDropVer13(long rate, long burstSize) {
+    public OFMeterBandDropVer13(long rate, long burstSize) {
         this.rate = rate;
         this.burstSize = burstSize;
     }

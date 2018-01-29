@@ -20,6 +20,7 @@ import org.projectfloodlight.openflow.protocol.*;
 import org.projectfloodlight.openflow.protocol.action.OFAction;
 import org.projectfloodlight.openflow.protocol.instruction.OFInstruction;
 import org.projectfloodlight.openflow.protocol.match.Match;
+import org.projectfloodlight.openflow.protocol.meterband.OFMeterBand;
 import org.projectfloodlight.openflow.protocol.oxm.OFOxm;
 import org.projectfloodlight.openflow.types.*;
 
@@ -726,6 +727,16 @@ public class OVXFactoryVer13 implements OVXFactory {
 	@Override
 	public OVXActionPushVlan buildOVXActionPushVlan(EthType ethType) {
 		return (OVXActionPushVlan)new OVXActionPushVlanVer13(ethType);
+	}
+
+	@Override
+	public OVXMeterMod buildOVXGroupAdd(long xid, OFGroupType groupType, OFGroup groupType1, List<OFBucket> buckets) {
+		return null;
+	}
+
+	@Override
+	public OVXMeterMod buildOVXMeterMod(long xid, int command, int flags, long meterId, List<OFMeterBand> meters) {
+		return (OVXMeterMod)new OVXMeterModVer13(xid, command, flags, meterId, meters);
 	}
 
 

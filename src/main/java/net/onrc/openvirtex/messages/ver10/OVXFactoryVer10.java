@@ -32,6 +32,7 @@ import org.projectfloodlight.openflow.protocol.action.OFActionSetVlanVid;
 import org.projectfloodlight.openflow.protocol.action.OFActionStripVlan;
 import org.projectfloodlight.openflow.protocol.instruction.OFInstruction;
 import org.projectfloodlight.openflow.protocol.match.Match;
+import org.projectfloodlight.openflow.protocol.meterband.OFMeterBand;
 import org.projectfloodlight.openflow.protocol.oxm.OFOxm;
 import org.projectfloodlight.openflow.types.*;
 import org.projectfloodlight.openflow.protocol.action.OFAction;
@@ -684,6 +685,16 @@ public class OVXFactoryVer10 implements OVXFactory {
 
 	@Override
 	public OVXActionPushVlan buildOVXActionPushVlan(EthType ethType) {
+		return null;
+	}
+
+	@Override
+	public OVXMeterMod buildOVXGroupAdd(long xid, OFGroupType groupType, OFGroup groupType1, List<OFBucket> buckets) {
+		return null;
+	}
+
+	@Override
+	public OVXMeterMod buildOVXMeterMod(long xid, int command, int flags, long meterId, List<OFMeterBand> meters) {
 		return null;
 	}
 

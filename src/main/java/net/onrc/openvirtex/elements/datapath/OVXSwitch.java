@@ -494,8 +494,13 @@ public abstract class OVXSwitch extends Switch<OVXPort> implements Persistable {
                 p.boot();
             }
         }
+
+        //this.initializeMeters();
+
         return true;
     }
+
+
 
     /*
      * (non-Javadoc)
@@ -1018,8 +1023,12 @@ public abstract class OVXSwitch extends Switch<OVXPort> implements Persistable {
                  ovxmessage = OVXFactoryInst.myOVXFactory.buildOVXTableFeaturesStatsRequest(((OFTableFeaturesStatsRequest)message).getXid(),((OFTableFeaturesStatsRequest) message).getFlags(), ((OFTableFeaturesStatsRequest) message).getEntries());
              else if(ovx_message_type.equals("OVXableFeaturesStatsReplyVer13"))
                  ovxmessage = OVXFactoryInst.myOVXFactory.buildOVXTableFeaturesStatsReply(((OFTableFeaturesStatsReply)message).getXid(),((OFTableFeaturesStatsReply) message).getFlags(), ((OFTableFeaturesStatsReply) message).getEntries());
+             else if(ovx_message_type.equals("OVXGroupAddVer13"))
+                 ovxmessage = OVXFactoryInst.myOVXFactory.buildOVXGroupAdd(((OFGroupAdd)message).getXid(),((OFGroupAdd) message).getGroupType(), ((OFGroupAdd) message).getGroup(), ((OFGroupAdd)message).getBuckets());
+             else if(ovx_message_type.equals("OVXMeterModVer13"))
+                 ovxmessage = OVXFactoryInst.myOVXFactory.buildOVXMeterMod(((OFMeterMod)message).getXid(),((OFMeterMod) message).getCommand(), ((OFMeterMod) message).getFlags(), ((OFMeterMod) message).getMeterId(), ((OFMeterMod) message).getMeters());
 
-             System.out.println("Ctrl : "+ ovx_message_type + " convert - "+ ovxmessage);
+            // System.out.println("Ctrl : "+ ovx_message_type + " convert - "+ ovxmessage);
 
          } else {
              System.out.println("msg is null");

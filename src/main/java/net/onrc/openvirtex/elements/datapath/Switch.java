@@ -229,6 +229,13 @@ public abstract class Switch<T extends Port> implements OVXEventHandler,
      */
     public abstract boolean boot() throws SwitchMappingException;
 
+
+    /**
+     * Initialize Meter
+     *
+     */
+    public abstract boolean initializeMeters();
+
     /**
      * Removes the switch from the network representation. Removal may be
      * triggered by an API call (in the case of a OVXSwitch) or disconnection of

@@ -205,6 +205,11 @@ public class OVXBigSwitch extends OVXSwitch {
         return super.boot();
     }
 
+    @Override
+    public boolean initializeMeters() {
+        return false;
+    }
+
     /**
      * Unregister route identified by routeId. Release routeId index, remove
      * virtual/physical route mappings from map, and remove virtual port-pair to
