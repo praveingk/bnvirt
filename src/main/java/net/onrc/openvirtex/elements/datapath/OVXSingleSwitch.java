@@ -48,7 +48,8 @@ public class OVXSingleSwitch extends OVXSwitch {
 
     @Override
     public boolean initializeMeters() {
-        OFMeterBandDrop myband = new OFMeterBandDropVer13(1000, 1000);
+        System.out.println("Initializing Meters...");
+        OFMeterBandDrop myband = new OFMeterBandDropVer13(100000, 100000);
         for (short port :this.getPorts().keySet()) {
             MeterMap.createMeter(this.getPorts().get(port), myband);
         }

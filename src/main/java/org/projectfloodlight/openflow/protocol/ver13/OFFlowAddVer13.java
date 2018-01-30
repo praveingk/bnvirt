@@ -25,6 +25,8 @@ import org.projectfloodlight.openflow.util.*;
 import org.projectfloodlight.openflow.exceptions.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
 import java.util.Set;
 import com.google.common.collect.ImmutableSet;
 import java.util.List;
@@ -220,6 +222,17 @@ public class OFFlowAddVer13 implements OFFlowAdd {
         OFInstructionApplyActionsVer13.Builder builder = new OFInstructionApplyActionsVer13.Builder();
         builder.setActions(actions);
         this.instructions = Collections.singletonList((OFInstruction)builder.build());
+    }
+
+    public void setActionsWithMeter(long meterId, List<OFAction> actions) {
+        OFInstructionMeterVer13.Builder builder = new OFInstructionMeterVer13.Builder();
+        builder.setMeterId(meterId);
+        this.instructions = new ArrayList<OFInstruction>();
+        this.instructions.add((OFInstruction)builder.build());
+        OFInstructionApplyActionsVer13.Builder builder2 = new OFInstructionApplyActionsVer13.Builder();
+        builder2.setActions(actions);
+        this.instructions.add((OFInstruction)builder2.build());
+
     }
     @Override
     public int getImportance()throws UnsupportedOperationException {

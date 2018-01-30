@@ -495,7 +495,7 @@ public abstract class OVXSwitch extends Switch<OVXPort> implements Persistable {
             }
         }
 
-        //this.initializeMeters();
+        this.initializeMeters();
 
         return true;
     }

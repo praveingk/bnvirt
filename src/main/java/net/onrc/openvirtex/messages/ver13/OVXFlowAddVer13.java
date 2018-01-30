@@ -21,6 +21,7 @@ import net.onrc.openvirtex.api.Global.TAG;
 
 
 import net.onrc.openvirtex.core.OVXFactoryInst;
+import net.onrc.openvirtex.elements.Mapper.MeterMap;
 import net.onrc.openvirtex.elements.Mapper.TenantMapperTos;
 import net.onrc.openvirtex.elements.Mapper.TenantMapperVlan;
 import net.onrc.openvirtex.elements.address.IPMapper;
@@ -167,6 +168,7 @@ public class OVXFlowAddVer13 extends OFFlowAddVer13 implements OVXFlowAdd {
         this.cookie=U64.of(ovxMatch.getCookie());
 
         System.out.println("Going after actions with ovxmatch="+ ovxMatch.toString());
+        OVXPort outPort = null;
         for (OFAction act: this.getActions()) {
             try {
                 if (act.getType().equals(OFActionType.SET_FIELD)) {
@@ -184,6 +186,10 @@ public class OVXFlowAddVer13 extends OFFlowAddVer13 implements OVXFlowAdd {
 
                 ((VirtualizableActionV3) act).virtualize(sw,
                         this.approvedActions, ovxMatch);
+                if (act.getType().equals(OFActionType.OUTPUT)) {
+                    short port  = ((OFActionOutputVer13)act).getPort().getShortPortNumber();
+                    outPort = sw.getPort(port);
+                }
             } catch (final ActionVirtualizationDenied e) {
                 this.log.warn("Action {} could not be virtualized; error: {}",
                         act, e.getMessage());
@@ -208,7 +214,7 @@ public class OVXFlowAddVer13 extends OFFlowAddVer13 implements OVXFlowAdd {
                 for (OVXPort iport : sw.getPorts().values()) {
                     //Match.Builder builder = ((OFMatchV3)this.match).createBuilder().setExact(MatchField.IN_PORT, iport.getPortNo());
                     this.match = addtoMatch((OFMatchV3)this.match, iport.getPortNo());
-                    prepAndSendSouth(iport, pflag);
+                    prepAndSendSouth(iport, pflag, outPort);
                 }
             } else {
                 this.log.error(
@@ -219,10 +225,10 @@ public class OVXFlowAddVer13 extends OFFlowAddVer13 implements OVXFlowAdd {
                 return;
             }
         } else {
-            prepAndSendSouth(ovxInPort, pflag);
+            prepAndSendSouth(ovxInPort, pflag, outPort);
 
-            System.out.println("Done with Flowmod. Lets try adding a meter");
-            createMeter(sw);
+            //System.out.println("Done with Flowmod. Lets try adding a meter");
+            //createMeter(sw);
         }
     }
 
@@ -290,7 +296,7 @@ public class OVXFlowAddVer13 extends OFFlowAddVer13 implements OVXFlowAdd {
         return false;
     }
 	
-    private void prepAndSendSouth(OVXPort inPort, boolean pflag) {
+    private void prepAndSendSouth(OVXPort inPort, boolean pflag, OVXPort outport) {
         if (!inPort.isActive()) {
             log.warn("Virtual network {}: port {} on switch {} is down.",
                     sw.getTenantId(), inPort.getPortNo(),
@@ -299,6 +305,7 @@ public class OVXFlowAddVer13 extends OFFlowAddVer13 implements OVXFlowAdd {
         }
         //this.match = this.match.createBuilder().setExact(MatchField.IN_PORT, OFPort.ofShort(inPort.getPhysicalPortNumber())).build();
         //this.match = this.getMatch().createBuilder().set.
+        long meterId = MeterMap.meterMapper.get(outport).getMeterId();
         this.match = addtoMatch((OFMatchV3)this.match,  OFPort.ofShort(inPort.getPhysicalPortNumber()));
         System.out.println(this.match.toString());
 
@@ -372,13 +379,14 @@ public class OVXFlowAddVer13 extends OFFlowAddVer13 implements OVXFlowAdd {
                     this.sw.getTenantId(), this);
         }
 
-        this.setActions(this.approvedActions);
+        //this.setActions(this.approvedActions);
+        this.setActionsWithMeter(meterId, this.approvedActions);
         System.out.println("&&&&&&&"+ Long.toHexString(sw.getSwitchId()) + "&&&&&&&Adding a New FlowMod : "+ this.toString());
         if (pflag) {
         	Set<OFFlowModFlags> flag_new=new HashSet<OFFlowModFlags>(this.flags);
         	flag_new.add(OFFlowModFlags.SEND_FLOW_REM);
             this.flags=flag_new;
-            System.out.println("Actually adding.$$$$");
+            //System.out.println("Actually adding.$$$$");
             sw.sendSouth(this, inPort);
         }
     }
